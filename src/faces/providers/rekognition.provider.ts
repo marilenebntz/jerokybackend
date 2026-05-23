@@ -11,7 +11,9 @@ export const RekognitionClientProvider = {
   useFactory: (configService: ConfigService) => {
     const region = configService.getOrThrow<string>('AWS_REGION');
     const accessKeyId = configService.getOrThrow<string>('AWS_ACCESS_KEY_ID');
-    const secretAccessKey = configService.getOrThrow<string>('AWS_SECRET_ACCESS_KEY');
+    const secretAccessKey = configService.getOrThrow<string>(
+      'AWS_SECRET_ACCESS_KEY',
+    );
 
     const config: RekognitionClientConfig = {
       region,
@@ -25,4 +27,3 @@ export const RekognitionClientProvider = {
   },
   inject: [ConfigService],
 };
-
