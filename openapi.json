@@ -1,0 +1,1604 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "AuthController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/users": {
+      "get": {
+        "operationId": "UsersController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ]
+      },
+      "post": {
+        "operationId": "UsersController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/students": {
+      "post": {
+        "operationId": "StudentsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStudentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Student"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      },
+      "get": {
+        "operationId": "StudentsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Student"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/api/students/{id}": {
+      "get": {
+        "operationId": "StudentsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Student"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/api/students/enroll": {
+      "post": {
+        "operationId": "StudentsController_enroll",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollStudentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Enrollment"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/api/students/info/enrollments": {
+      "get": {
+        "operationId": "StudentsController_getEnrollments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Enrollment"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/api/students/enrollments/{id}/status": {
+      "patch": {
+        "operationId": "StudentsController_updateEnrollmentStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Enrollment"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/api/students/transfer": {
+      "post": {
+        "operationId": "StudentsController_transfer",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Enrollment"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/api/students/info/tutors": {
+      "get": {
+        "operationId": "StudentsController_getTutors",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tutor"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/api/courses": {
+      "post": {
+        "operationId": "CoursesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCourseBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Course"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Courses"
+        ]
+      },
+      "get": {
+        "operationId": "CoursesController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Course"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Courses"
+        ]
+      }
+    },
+    "/api/courses/{id}": {
+      "get": {
+        "operationId": "CoursesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Course"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Courses"
+        ]
+      },
+      "patch": {
+        "operationId": "CoursesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCourseBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Course"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Courses"
+        ]
+      },
+      "delete": {
+        "operationId": "CoursesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Courses"
+        ]
+      }
+    },
+    "/api/attendance/biometric": {
+      "post": {
+        "operationId": "AttendanceController_checkInBiometric",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/attendance/reports": {
+      "get": {
+        "operationId": "AttendanceController_getReports",
+        "parameters": [
+          {
+            "name": "courseId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/faces": {
+      "post": {
+        "operationId": "FacesController_registerFace",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Faces"
+        ]
+      }
+    },
+    "/api/faces/identify": {
+      "post": {
+        "operationId": "FacesController_identifyFace",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Faces"
+        ]
+      }
+    },
+    "/api/faces/{faceId}": {
+      "delete": {
+        "operationId": "FacesController_deleteFace",
+        "parameters": [
+          {
+            "name": "faceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Faces"
+        ]
+      }
+    },
+    "/api/grades/batch": {
+      "post": {
+        "operationId": "GradesController_saveBatch",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Grade"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Grades"
+        ]
+      }
+    },
+    "/api/grades/student/{studentId}": {
+      "get": {
+        "operationId": "GradesController_getHistoryByStudent",
+        "parameters": [
+          {
+            "name": "studentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Grade"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Grades"
+        ]
+      }
+    },
+    "/api/grades/stats/averages": {
+      "get": {
+        "operationId": "GradesController_getAverageGradesByStyle",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Grades"
+        ]
+      }
+    },
+    "/api/communications": {
+      "post": {
+        "operationId": "CommunicationsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCommunicationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Communication"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Communications"
+        ]
+      },
+      "get": {
+        "operationId": "CommunicationsController_getCommunications",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Communication"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Communications"
+        ]
+      }
+    },
+    "/api/communications/logs": {
+      "get": {
+        "operationId": "CommunicationsController_getLogs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommunicationLog"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Communications"
+        ]
+      }
+    },
+    "/api/audit": {
+      "get": {
+        "operationId": "AuditController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditLog"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/api/system/dashboard-stats": {
+      "get": {
+        "operationId": "SystemController_getDashboardStats",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/system/backup": {
+      "post": {
+        "operationId": "SystemController_generateBackup",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/system/backup/interval": {
+      "get": {
+        "operationId": "SystemController_getBackupInterval",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "System"
+        ]
+      },
+      "post": {
+        "operationId": "SystemController_setBackupInterval",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "System"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Yeruti Academia de Danza API",
+    "description": "API documentation for the Yeruti Dance Academy management system",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "JWT-auth": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "name": "JWT",
+        "description": "Enter your JWT token to access secured endpoints",
+        "in": "header"
+      }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "passwordHash": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "Administrator",
+              "Director",
+              "Docente",
+              "Operador",
+              "Alumno",
+              "Tutor"
+            ],
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "passwordHash",
+          "role",
+          "isActive",
+          "firstName",
+          "lastName",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateTutorDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$"
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$"
+          },
+          "ci": {
+            "type": "string",
+            "pattern": "^\\d{6,15}$"
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\d{6,13}$"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "ci",
+          "phone",
+          "email"
+        ]
+      },
+      "CreateStudentDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$"
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$"
+          },
+          "ci": {
+            "type": "string",
+            "pattern": "^\\d{6,15}$"
+          },
+          "birthDate": {
+            "type": "string"
+          },
+          "encryptedMedicalInfo": {
+            "type": "string"
+          },
+          "biometricConsent": {
+            "type": "boolean"
+          },
+          "tutorId": {
+            "type": "string"
+          },
+          "tutor": {
+            "$ref": "#/components/schemas/CreateTutorDto"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "ci",
+          "birthDate"
+        ]
+      },
+      "Student": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "ci": {
+            "type": "string"
+          },
+          "birthDate": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "encryptedMedicalInfo": {
+            "type": "string",
+            "nullable": true
+          },
+          "biometricTemplateId": {
+            "type": "string",
+            "nullable": true
+          },
+          "biometricConsent": {
+            "type": "boolean"
+          },
+          "tutor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Tutor"
+              }
+            ]
+          },
+          "user": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "ci",
+          "birthDate",
+          "encryptedMedicalInfo",
+          "biometricTemplateId",
+          "biometricConsent",
+          "tutor",
+          "user",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Tutor": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "ci": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "students": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Student"
+            }
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "ci",
+          "phone",
+          "email",
+          "students",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "EnrollStudentDto": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "academicPeriod": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "studentId",
+          "courseId",
+          "academicPeriod"
+        ]
+      },
+      "CourseSchedule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "course": {
+            "$ref": "#/components/schemas/Course"
+          },
+          "courseId": {
+            "type": "string"
+          },
+          "dayOfWeek": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "classroom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "course",
+          "courseId",
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "classroom"
+        ]
+      },
+      "Course": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "number"
+          },
+          "year": {
+            "type": "number"
+          },
+          "classCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "schedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseSchedule"
+            }
+          },
+          "teacher": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ]
+          },
+          "teacherId": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "level",
+          "capacity",
+          "year",
+          "classCode",
+          "schedules",
+          "teacher",
+          "teacherId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "Enrollment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "student": {
+            "$ref": "#/components/schemas/Student"
+          },
+          "studentId": {
+            "type": "string"
+          },
+          "course": {
+            "$ref": "#/components/schemas/Course"
+          },
+          "courseId": {
+            "type": "string"
+          },
+          "academicPeriod": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "student",
+          "studentId",
+          "course",
+          "courseId",
+          "academicPeriod",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CourseScheduleDto": {
+        "type": "object",
+        "properties": {
+          "dayOfWeek": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "classroom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dayOfWeek",
+          "startTime",
+          "endTime",
+          "classroom"
+        ]
+      },
+      "CreateCourseBodyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "number",
+            "minimum": 1
+          },
+          "year": {
+            "type": "number"
+          },
+          "teacherId": {
+            "type": "string"
+          },
+          "schedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseScheduleDto"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "level",
+          "capacity",
+          "schedules"
+        ]
+      },
+      "UpdateCourseBodyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "number",
+            "minimum": 1
+          },
+          "year": {
+            "type": "number"
+          },
+          "teacherId": {
+            "type": "string",
+            "nullable": true
+          },
+          "schedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseScheduleDto"
+            }
+          }
+        }
+      },
+      "Grade": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "student": {
+            "$ref": "#/components/schemas/Student"
+          },
+          "studentId": {
+            "type": "string"
+          },
+          "course": {
+            "$ref": "#/components/schemas/Course"
+          },
+          "courseId": {
+            "type": "string"
+          },
+          "techniqueScore": {
+            "type": "number"
+          },
+          "expressionScore": {
+            "type": "number"
+          },
+          "disciplineScore": {
+            "type": "number"
+          },
+          "average": {
+            "type": "number"
+          },
+          "period": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "student",
+          "studentId",
+          "course",
+          "courseId",
+          "techniqueScore",
+          "expressionScore",
+          "disciplineScore",
+          "average",
+          "period",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateCommunicationDto": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 250
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "targetRoles": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "Administrator",
+                "Director",
+                "Docente",
+                "Operador",
+                "Alumno",
+                "Tutor"
+              ]
+            }
+          },
+          "channels": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "subject",
+          "body",
+          "targetRoles",
+          "channels"
+        ]
+      },
+      "Communication": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "targetRoles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Administrator",
+                "Director",
+                "Docente",
+                "Operador",
+                "Alumno",
+                "Tutor"
+              ]
+            }
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sender": {
+            "$ref": "#/components/schemas/User"
+          },
+          "senderId": {
+            "type": "string"
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommunicationLog"
+            }
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "subject",
+          "body",
+          "targetRoles",
+          "channels",
+          "sender",
+          "senderId",
+          "logs",
+          "createdAt"
+        ]
+      },
+      "CommunicationLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "communication": {
+            "$ref": "#/components/schemas/Communication"
+          },
+          "communicationId": {
+            "type": "string"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/User"
+          },
+          "recipientId": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "sentAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "communication",
+          "communicationId",
+          "recipient",
+          "recipientId",
+          "channel",
+          "status",
+          "sentAt"
+        ]
+      },
+      "AuditLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string",
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "ipAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "details": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "userId",
+          "username",
+          "ipAddress",
+          "timestamp",
+          "details"
+        ]
+      }
+    }
+  }
+}

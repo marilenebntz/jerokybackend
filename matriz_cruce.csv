@@ -1,0 +1,8 @@
+Prototipo,Caso de uso,Requerimiento funcional relacionado,Tablas principales de la base de datos,Clase principal,Métodos principales
+P01 – Iniciar sesión,CU01 – Autenticar usuario,RF1 – AUTENTICACIÓN DE USUARIOS,users,AuthService,"login(), findOneByEmail()"
+P02 – Administrar usuarios y roles,CU02 – Gestionar perfiles y permisos,RF2 – GESTIÓN DE USUARIOS Y ROLES,users,UsersService,"create(), updateUserRole(), findAll()"
+P03 – Registrar y consultar alumno,CU03 – Registrar y gestionar ficha de alumno,RF3 – GESTIÓN DE ALUMNOS,"students, tutors",StudentsService,"create(), findOne(), findAll()"
+P04 – Matricular y trasladar alumno,CU04 – Gestionar matrícula y estado académico,RF4 – GESTIÓN DE MATRÍCULAS,"enrollments, courses",StudentsService,"enroll(), transfer(), updateEnrollmentStatus()"
+P05 – Registrar asistencia biométrica,CU05 – Registrar asistencia mediante reconocimiento facial,RF5 – GESTIÓN DE ASISTENCIA,"attendances, students",AttendanceService,"checkInBiometric(), getReports()"
+P06 – Registrar y consultar calificaciones,CU06 – Cargar notas y calcular promedios,RF6 – REGISTRO DE CALIFICACIONES,grades,GradesService,"saveBatch(), getHistoryByStudent()"
+P07 – Enviar comunicados a tutores,CU07 – Enviar notificaciones y comunicados a tutores,RF7 – GESTIÓN DE COMUNICACIONES,"communications, communication_logs, users",CommunicationsService,"create(), getLogs(), getCommunications()"
