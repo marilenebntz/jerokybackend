@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import * as path from 'path';
 import { User } from '../users/entities/user.entity';
 import { Student } from '../students/entities/student.entity';
 import { Tutor } from '../students/entities/tutor.entity';
@@ -18,29 +19,39 @@ import { AuditLog } from '../audit/entities/audit-log.entity';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DATABASE_HOST', 'localhost'),
-        port: configService.get<number>('DATABASE_PORT', 5432),
-        username: configService.get<string>('DATABASE_USERNAME', 'postgres'),
-        password: configService.get<string>('DATABASE_PASSWORD', 'postgres'),
-        database: configService.get<string>('DATABASE_NAME', 'jeroky_soft'),
-        entities: [
-          User,
-          Student,
-          Tutor,
-          Enrollment,
-          Course,
-          CourseSchedule,
-          Attendance,
-          Grade,
-          Communication,
-          CommunicationLog,
-          AuditLog,
-        ],
-        synchronize: true, // Set to false in production, using migrations instead, but true is okay for this dev setup
-        logging: false,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const isProduction = configService.get<string>('NODE_ENV') === 'production';
+        const syncEnv = configService.get<string>('DATABASE_SYNCHRONIZE');
+        const synchronize = isProduction ? false : syncEnv !== 'false';
+        const migrationsRun =
+          isProduction || configService.get<string>('DATABASE_MIGRATIONS_RUN') === 'true';
+
+        return {
+          type: 'postgres',
+          host: configService.get<string>('DATABASE_HOST', 'localhost'),
+          port: configService.get<number>('DATABASE_PORT', 5432),
+          username: configService.get<string>('DATABASE_USERNAME', 'postgres'),
+          password: configService.get<string>('DATABASE_PASSWORD', 'password'),
+          database: configService.get<string>('DATABASE_NAME', 'jeroky_soft_db'),
+          entities: [
+            User,
+            Student,
+            Tutor,
+            Enrollment,
+            Course,
+            CourseSchedule,
+            Attendance,
+            Grade,
+            Communication,
+            CommunicationLog,
+            AuditLog,
+          ],
+          migrations: [path.join(__dirname, 'migrations', '*{.ts,.js}')],
+          migrationsRun,
+          synchronize,
+          logging: !isProduction && configService.get<string>('DATABASE_LOGGING') === 'true',
+        };
+      },
     }),
   ],
   exports: [TypeOrmModule],
