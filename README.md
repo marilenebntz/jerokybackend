@@ -52,6 +52,8 @@ npm run start:dev
 | `npm run migration:show` | Muestra el estado de las migraciones |
 | `npm run db:seed` | Ejecuta el script de seed de datos iniciales (`seed.sql`) |
 | `npm run db:setup` | Ejecuta `migration:run` seguido de `db:seed` |
+| `npm run db:drop` | Elimina por completo todas las tablas, tipos y objetos del esquema `public` |
+| `npm run db:reset` | Ejecuta `db:drop`, seguido de `migration:run` y `db:seed` (reset completo) |
 
 ---
 

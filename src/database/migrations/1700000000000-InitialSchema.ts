@@ -7,13 +7,22 @@ export class InitialSchema1700000000000 implements MigrationInterface {
     // Enable uuid-ossp extension if available
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
 
+    // Enum for User Roles
+    await queryRunner.query(`
+      DO $$ BEGIN
+        CREATE TYPE "public"."users_role_enum" AS ENUM('Administrator', 'Director', 'Docente', 'Operador', 'Alumno', 'Tutor');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `);
+
     // 1. Users table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "users" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "email" character varying NOT NULL,
         "passwordHash" character varying NOT NULL,
-        "role" character varying NOT NULL DEFAULT 'Alumno',
+        "role" "public"."users_role_enum" NOT NULL,
         "isActive" boolean NOT NULL DEFAULT true,
         "firstName" character varying,
         "lastName" character varying,
@@ -202,5 +211,6 @@ export class InitialSchema1700000000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "students" CASCADE;`);
     await queryRunner.query(`DROP TABLE IF EXISTS "tutors" CASCADE;`);
     await queryRunner.query(`DROP TABLE IF EXISTS "users" CASCADE;`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."users_role_enum" CASCADE;`);
   }
 }
