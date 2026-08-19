@@ -344,6 +344,7 @@ export interface ReportItem {
   classesHeld?: number;
   classesScheduled?: number;
   regularity?: 'REGULAR' | 'EN ALERTA' | 'IRREGULAR';
+  attendedClasses?: number;
   presentCount?: number;
   absentCount?: number;
   status?: string;
@@ -1029,7 +1030,8 @@ export class AttendanceService {
           classesHeld,
           classesScheduled: Math.max(classesHeld, classesScheduled),
           regularity,
-          presentCount: stats.entrada,
+          attendedClasses: attendedDaysCount,
+          presentCount: attendedDaysCount,
           absentCount: Math.max(0, classesHeld - attendedDaysCount),
           status: regularity,
         };

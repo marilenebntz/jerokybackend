@@ -828,6 +828,8 @@ describe('AttendanceService - Unit Tests', () => {
 
       expect(reports).toHaveLength(1);
       expect(reports[0].classesHeld).toBe(1);
+      expect(reports[0].attendedClasses).toBe(1);
+      expect(reports[0].presentCount).toBe(1);
       expect(reports[0].entradas).toBe(2); // Raw checkins preserved
       expect(reports[0].percentage).toBe(100); // 1 distinct day / 1 class held = 100%
       expect(reports[0].regularity).toBe('REGULAR');
