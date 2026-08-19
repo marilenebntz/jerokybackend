@@ -153,18 +153,35 @@ export class StudentsService {
       } else {
         student.tutor = null;
       }
-    } else if (updateStudentDto.tutor) {
-      let tutor: Tutor | null = null;
-      const existingTutor = await this.tutorRepository.findOne({
-        where: { ci: updateStudentDto.tutor.ci },
-      });
-      if (existingTutor) {
-        tutor = existingTutor;
+    } else if (updateStudentDto.tutor !== undefined) {
+      if (updateStudentDto.tutor === null) {
+        student.tutor = null;
       } else {
-        tutor = this.tutorRepository.create(updateStudentDto.tutor);
-        tutor = await this.tutorRepository.save(tutor);
+        const tutorData = updateStudentDto.tutor;
+        let targetTutor: Tutor | null = null;
+
+        // If the student already has a tutor and CI is either unchanged or not provided, update that tutor
+        if (student.tutor && (!tutorData.ci || student.tutor.ci === tutorData.ci)) {
+          targetTutor = student.tutor;
+        } else if (tutorData.ci) {
+          // If CI changed or student had no tutor, check if a tutor with that CI already exists
+          targetTutor = await this.tutorRepository.findOne({
+            where: { ci: tutorData.ci },
+          });
+        }
+
+        if (targetTutor) {
+          if (tutorData.firstName) targetTutor.firstName = tutorData.firstName;
+          if (tutorData.lastName) targetTutor.lastName = tutorData.lastName;
+          if (tutorData.ci) targetTutor.ci = tutorData.ci;
+          if (tutorData.phone) targetTutor.phone = tutorData.phone;
+          if (tutorData.email) targetTutor.email = tutorData.email;
+          student.tutor = await this.tutorRepository.save(targetTutor);
+        } else {
+          const newTutor = this.tutorRepository.create(tutorData);
+          student.tutor = await this.tutorRepository.save(newTutor);
+        }
       }
-      student.tutor = tutor;
     }
 
     // Check minor requirement
