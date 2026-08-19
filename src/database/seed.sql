@@ -248,7 +248,6 @@ INSERT INTO "enrollments" (
   "id",
   "studentId",
   "courseId",
-  "academicPeriod",
   "status",
   "createdAt",
   "updatedAt"
@@ -257,7 +256,6 @@ INSERT INTO "enrollments" (
     '30eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
     '10eebc99-9c0b-4ef8-bb6d-6bb9bd380a20',
     'e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15',
-    '2026-I',
     'active',
     NOW(),
     NOW()
@@ -266,9 +264,8 @@ INSERT INTO "enrollments" (
     '40eebc99-9c0b-4ef8-bb6d-6bb9bd380a23',
     '20eebc99-9c0b-4ef8-bb6d-6bb9bd380a21',
     'e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a16',
-    '2026-I',
     'active',
     NOW(),
     NOW()
   )
-ON CONFLICT ("studentId", "courseId", "academicPeriod") DO NOTHING;
+ON CONFLICT ("studentId", "courseId") DO NOTHING;

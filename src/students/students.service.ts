@@ -120,13 +120,12 @@ export class StudentsService {
       throw new NotFoundException('Modalidad/Curso no encontrado');
     }
 
-    // Check if student is already active in a course of the same modality (course.name)
+    // Check if student is already active in a course of the same modality (course.name) for the same year (course.year)
     const activeModalityEnrollment = await this.enrollmentRepository.findOne({
       where: {
         studentId: dto.studentId,
-        academicPeriod: dto.academicPeriod,
         status: 'active',
-        course: { name: course.name },
+        course: { name: course.name, year: course.year },
       },
       relations: { course: true },
     });
@@ -136,7 +135,7 @@ export class StudentsService {
       activeModalityEnrollment.courseId !== dto.courseId
     ) {
       throw new ConflictException(
-        `El alumno ya se encuentra matriculado en esta modalidad (${course.name})`,
+        `El alumno ya se encuentra matriculado en esta modalidad (${course.name}) para el año lectivo ${course.year}`,
       );
     }
 
@@ -144,7 +143,6 @@ export class StudentsService {
     const activeEnrollments = await this.enrollmentRepository.count({
       where: {
         courseId: dto.courseId,
-        academicPeriod: dto.academicPeriod,
         status: 'active',
       },
     });
@@ -159,14 +157,13 @@ export class StudentsService {
       where: {
         studentId: dto.studentId,
         courseId: dto.courseId,
-        academicPeriod: dto.academicPeriod,
       },
     });
 
     if (existingEnrollment) {
       if (existingEnrollment.status === 'active') {
         throw new ConflictException(
-          'El estudiante ya se encuentra matriculado en este curso para este período',
+          'El estudiante ya se encuentra matriculado activamente en este curso',
         );
       } else {
         existingEnrollment.status = 'active';
@@ -177,7 +174,6 @@ export class StudentsService {
     const enrollment = this.enrollmentRepository.create({
       student,
       course,
-      academicPeriod: dto.academicPeriod,
       status: 'active',
     });
 
@@ -186,7 +182,11 @@ export class StudentsService {
 
   async getEnrollments(): Promise<Enrollment[]> {
     return this.enrollmentRepository.find({
-      relations: { student: true, course: { teacher: true } },
+      relations: {
+        student: true,
+        course: { teacher: true, schedules: true },
+      },
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -213,7 +213,6 @@ export class StudentsService {
   async transfer(
     enrollmentId: string,
     targetCourseId: string,
-    academicPeriod: string,
   ): Promise<Enrollment> {
     const enrollment = await this.enrollmentRepository.findOne({
       where: { id: enrollmentId },
@@ -221,6 +220,25 @@ export class StudentsService {
     });
     if (!enrollment) {
       throw new NotFoundException('Matrícula de origen no encontrada');
+    }
+
+    if (enrollment.status !== 'active') {
+      throw new BadRequestException(
+        'Solo se pueden transferir matrículas en estado activo',
+      );
+    }
+
+    if (enrollment.courseId === targetCourseId) {
+      throw new BadRequestException(
+        'El curso de destino no puede ser igual al curso de origen',
+      );
+    }
+
+    const targetCourse = await this.courseRepository.findOne({
+      where: { id: targetCourseId },
+    });
+    if (!targetCourse) {
+      throw new NotFoundException('Modalidad/Curso de destino no encontrado');
     }
 
     const oldStatus = enrollment.status;
@@ -234,7 +252,6 @@ export class StudentsService {
       return await this.enroll({
         studentId: enrollment.studentId,
         courseId: targetCourseId,
-        academicPeriod: academicPeriod,
       });
     } catch (err) {
       // Rollback status if the target enrollment fails

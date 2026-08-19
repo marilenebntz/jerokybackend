@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsUUID, IsInt, Min, Max, IsString } from 'class-validator';
+import { IsNotEmpty, IsUUID, IsInt, Min, Max, IsEnum } from 'class-validator';
+import { EvaluationStage } from '../entities/grade.entity';
 
 export class GradeUploadItemDto {
   @IsNotEmpty({ message: 'El ID del alumno es obligatorio' })
@@ -27,9 +28,11 @@ export class GradeUploadItemDto {
   @Max(100, { message: 'La nota máxima es 100' })
   disciplineScore: number;
 
-  @IsNotEmpty({ message: 'El período es obligatorio' })
-  @IsString({ message: 'El período debe ser una cadena de texto' })
-  period: string;
+  @IsNotEmpty({ message: 'La etapa de evaluación es obligatoria' })
+  @IsEnum(EvaluationStage, {
+    message: 'La etapa debe ser una etapa válida (1ª Etapa, 2ª Etapa, Examen Final, Recuperatorio)',
+  })
+  stage: EvaluationStage;
 }
 
 export class BatchUploadGradesDto {

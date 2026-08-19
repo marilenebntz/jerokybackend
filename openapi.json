@@ -485,7 +485,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
                 }
               }
             }
@@ -1119,15 +1122,11 @@
           "courseId": {
             "type": "string",
             "format": "uuid"
-          },
-          "academicPeriod": {
-            "type": "string"
           }
         },
         "required": [
           "studentId",
-          "courseId",
-          "academicPeriod"
+          "courseId"
         ]
       },
       "CourseSchedule": {
@@ -1247,9 +1246,6 @@
           "courseId": {
             "type": "string"
           },
-          "academicPeriod": {
-            "type": "string"
-          },
           "status": {
             "type": "string"
           },
@@ -1268,7 +1264,6 @@
           "studentId",
           "course",
           "courseId",
-          "academicPeriod",
           "status",
           "createdAt",
           "updatedAt"
@@ -1388,7 +1383,13 @@
           "average": {
             "type": "number"
           },
-          "period": {
+          "stage": {
+            "enum": [
+              "1ª Etapa",
+              "2ª Etapa",
+              "Examen Final",
+              "Recuperatorio"
+            ],
             "type": "string"
           },
           "createdAt": {
@@ -1410,7 +1411,7 @@
           "expressionScore",
           "disciplineScore",
           "average",
-          "period",
+          "stage",
           "createdAt",
           "updatedAt"
         ]

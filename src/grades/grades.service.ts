@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Grade } from './entities/grade.entity';
 import { GradeUploadItemDto } from './dto/upload-grades-batch.dto';
 import { Student } from '../students/entities/student.entity';
@@ -18,15 +18,24 @@ export class GradesService {
   ) {}
 
   async saveBatch(gradeItems: GradeUploadItemDto[]): Promise<Grade[]> {
+    if (!gradeItems || gradeItems.length === 0) {
+      return [];
+    }
+
+    const studentIds = Array.from(new Set(gradeItems.map((g) => g.studentId)));
+    const courseIds = Array.from(new Set(gradeItems.map((g) => g.courseId)));
+
+    const students = await this.studentRepository.findBy({ id: In(studentIds) });
+    const courses = await this.courseRepository.findBy({ id: In(courseIds) });
+
+    const studentMap = new Map(students.map((s) => [s.id, s]));
+    const courseMap = new Map(courses.map((c) => [c.id, c]));
+
     const savedGrades: Grade[] = [];
 
     for (const item of gradeItems) {
-      const student = await this.studentRepository.findOne({
-        where: { id: item.studentId },
-      });
-      const course = await this.courseRepository.findOne({
-        where: { id: item.courseId },
-      });
+      const student = studentMap.get(item.studentId);
+      const course = courseMap.get(item.courseId);
 
       if (!student || !course) {
         throw new NotFoundException(
@@ -34,12 +43,12 @@ export class GradesService {
         );
       }
 
-      // Check if grade already exists for this period, student and course
+      // Check if grade already exists for this stage, student and course
       let grade = await this.gradeRepository.findOne({
         where: {
           studentId: item.studentId,
           courseId: item.courseId,
-          period: item.period,
+          stage: item.stage,
         },
       });
 
@@ -51,10 +60,12 @@ export class GradesService {
         grade = this.gradeRepository.create({
           student,
           course,
+          studentId: item.studentId,
+          courseId: item.courseId,
           techniqueScore: item.techniqueScore,
           expressionScore: item.expressionScore,
           disciplineScore: item.disciplineScore,
-          period: item.period,
+          stage: item.stage,
         });
       }
 
@@ -77,7 +88,7 @@ export class GradesService {
     return this.gradeRepository.find({
       where: { studentId },
       relations: { course: true },
-      order: { period: 'ASC', createdAt: 'ASC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
