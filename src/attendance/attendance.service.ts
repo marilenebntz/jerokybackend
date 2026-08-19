@@ -132,6 +132,96 @@ export function dateToMinutes(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
 }
 
+/**
+ * Returns the calendar date string in YYYY-MM-DD format for a given date in the target timezone.
+ */
+export function getZonedDateKey(
+  date: Date = new Date(),
+  timeZone: string = DEFAULT_TIMEZONE,
+): string {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    return formatter.format(date);
+  } catch {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+}
+
+/**
+ * Resolves start and end date boundaries for a given academic period string (e.g. "2026-I", "2026-II", "1ª Etapa", "2026").
+ */
+export function resolvePeriodDateRange(
+  period?: string,
+  defaultYear: number = new Date().getFullYear(),
+): { startDate: Date; endDate: Date } | null {
+  if (!period) {
+    return null;
+  }
+
+  const trimmed = period.trim();
+  const yearMatch = trimmed.match(/(\d{4})/);
+  const year = yearMatch ? parseInt(yearMatch[1], 10) : defaultYear;
+
+  const isFirstStage =
+    /[-_ ](I|1)$/i.test(trimmed) ||
+    /1[aª]?\s*etapa/i.test(trimmed) ||
+    /primer[oa]?/i.test(trimmed);
+  const isSecondStage =
+    /[-_ ](II|2)$/i.test(trimmed) ||
+    /2[aª]?\s*etapa/i.test(trimmed) ||
+    /segund[oa]?/i.test(trimmed);
+
+  if (isFirstStage) {
+    return {
+      startDate: new Date(year, 0, 1, 0, 0, 0, 0),
+      endDate: new Date(year, 5, 30, 23, 59, 59, 999),
+    };
+  }
+
+  if (isSecondStage) {
+    return {
+      startDate: new Date(year, 6, 1, 0, 0, 0, 0),
+      endDate: new Date(year, 11, 31, 23, 59, 59, 999),
+    };
+  }
+
+  if (yearMatch) {
+    return {
+      startDate: new Date(year, 0, 1, 0, 0, 0, 0),
+      endDate: new Date(year, 11, 31, 23, 59, 59, 999),
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Classifies attendance regularity based on institutional thresholds (>= 75% Regular, 70-74% En Alerta, < 70% Irregular).
+ */
+export function calculateRegularity(
+  percentage: number,
+  classesHeld: number = 0,
+): 'REGULAR' | 'EN ALERTA' | 'IRREGULAR' {
+  if (classesHeld === 0) {
+    return 'REGULAR';
+  }
+  if (percentage >= 75) {
+    return 'REGULAR';
+  }
+  if (percentage >= 70) {
+    return 'EN ALERTA';
+  }
+  return 'IRREGULAR';
+}
+
 export interface BiometricCheckInResponse {
   success: boolean;
   message: string;
@@ -149,6 +239,8 @@ export interface ReportItem {
   entradas: number;
   salidas: number;
   percentage: number;
+  classesHeld?: number;
+  regularity?: 'REGULAR' | 'EN ALERTA' | 'IRREGULAR';
 }
 
 interface ScheduleMatch {
@@ -168,6 +260,8 @@ export class AttendanceService {
     private readonly studentRepository: Repository<Student>,
     @InjectRepository(Enrollment)
     private readonly enrollmentRepository: Repository<Enrollment>,
+    @InjectRepository(Course)
+    private readonly courseRepository: Repository<Course>,
     private readonly facesService: FacesService,
   ) {}
 
@@ -358,7 +452,53 @@ export class AttendanceService {
     courseId?: string,
     period?: string,
   ): Promise<ReportItem[]> {
-    void period;
+    if (!courseId) {
+      throw new BadRequestException(
+        'El parámetro courseId es obligatorio para consultar reportes de asistencia',
+      );
+    }
+
+    // 1. Resolve date range from period or course year
+    const course = await this.courseRepository.findOne({
+      where: { id: courseId },
+    });
+    if (!course) {
+      throw new NotFoundException('Curso no encontrado');
+    }
+
+    const defaultYear = course.year || new Date().getFullYear();
+    const dateRange = resolvePeriodDateRange(period, defaultYear);
+
+    // 2. Fetch active enrollments to ensure all enrolled students are included
+    const enrolledStudentsMap = new Map<
+      string,
+      {
+        studentName: string;
+        total: number;
+        entrada: number;
+        salida: number;
+        attendedDays: Set<string>;
+      }
+    >();
+
+    const enrollments = await this.enrollmentRepository.find({
+      where: { courseId, status: 'active' },
+      relations: { student: true },
+    });
+
+    for (const e of enrollments) {
+      if (e.student) {
+        enrolledStudentsMap.set(e.studentId, {
+          studentName: `${e.student.firstName} ${e.student.lastName}`.trim(),
+          total: 0,
+          entrada: 0,
+          salida: 0,
+          attendedDays: new Set<string>(),
+        });
+      }
+    }
+
+    // 3. Query attendances
     const query = this.attendanceRepository
       .createQueryBuilder('attendance')
       .leftJoinAndSelect('attendance.student', 'student')
@@ -368,41 +508,66 @@ export class AttendanceService {
       query.andWhere('attendance.courseId = :courseId', { courseId });
     }
 
+    if (dateRange) {
+      query.andWhere('attendance.timestamp >= :startDate', {
+        startDate: dateRange.startDate,
+      });
+      query.andWhere('attendance.timestamp <= :endDate', {
+        endDate: dateRange.endDate,
+      });
+    }
+
     const attendances = await query.getMany();
 
-    // Group by student to calculate attendance percentage
-    const studentStats: Record<
-      string,
-      { studentName: string; total: number; entrada: number; salida: number }
-    > = {};
+    // 4. Determine classes held: distinct calendar dates where attendance (ENTRADA) was registered
+    const distinctClassDates = new Set<string>();
 
     attendances.forEach((att) => {
+      if (!att.student) return;
       const sId = att.studentId;
-      if (!studentStats[sId]) {
-        studentStats[sId] = {
-          studentName: `${att.student.firstName} ${att.student.lastName}`,
+      const dateKey = getZonedDateKey(new Date(att.timestamp));
+
+      if (att.type === AttendanceType.ENTRADA) {
+        distinctClassDates.add(dateKey);
+      }
+
+      if (!enrolledStudentsMap.has(sId)) {
+        enrolledStudentsMap.set(sId, {
+          studentName: `${att.student.firstName} ${att.student.lastName}`.trim(),
           total: 0,
           entrada: 0,
           salida: 0,
-        };
+          attendedDays: new Set<string>(),
+        });
       }
-      studentStats[sId].total++;
+
+      const stats = enrolledStudentsMap.get(sId)!;
+      stats.total++;
       if (att.type === AttendanceType.ENTRADA) {
-        studentStats[sId].entrada++;
+        stats.entrada++;
+        stats.attendedDays.add(dateKey);
       } else {
-        studentStats[sId].salida++;
+        stats.salida++;
       }
     });
 
-    // In a real scenario, attendance percentage would be based on expected classes.
-    // Let's assume 20 classes is 100% for this period.
-    const result: ReportItem[] = Object.entries(studentStats).map(
+    const classesHeld = distinctClassDates.size;
+
+    // 5. Calculate percentage and regularity without bias
+    const result: ReportItem[] = Array.from(enrolledStudentsMap.entries()).map(
       ([studentId, stats]) => {
-        const expectedClasses = 20;
-        const percentage = Math.min(
-          Math.round((stats.entrada / expectedClasses) * 100),
-          100,
-        );
+        const attendedDaysCount = stats.attendedDays.size;
+
+        let percentage = 100;
+        if (classesHeld > 0) {
+          percentage = Math.min(
+            100,
+            Math.round((attendedDaysCount / classesHeld) * 100),
+          );
+        }
+
+        const regularity = calculateRegularity(percentage, classesHeld);
+
         return {
           studentId,
           studentName: stats.studentName,
@@ -410,9 +575,14 @@ export class AttendanceService {
           entradas: stats.entrada,
           salidas: stats.salida,
           percentage,
+          classesHeld,
+          regularity,
         };
       },
     );
+
+    // Sort alphabetically by student name
+    result.sort((a, b) => a.studentName.localeCompare(b.studentName));
 
     return result;
   }
