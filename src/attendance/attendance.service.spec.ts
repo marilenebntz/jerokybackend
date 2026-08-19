@@ -10,6 +10,8 @@ import {
   getZonedMinutes,
   getZonedStartOfDay,
   getZonedDateKey,
+  parseAttendanceDate,
+  resolveDayBounds,
   resolvePeriodDateRange,
   calculateRegularity,
 } from './attendance.service';
@@ -36,6 +38,7 @@ describe('AttendanceService - Unit Tests', () => {
         id: 'att-1',
         timestamp: att.timestamp || new Date(),
       })),
+      remove: jest.fn(),
       createQueryBuilder: jest.fn(),
     };
 
@@ -207,6 +210,44 @@ describe('AttendanceService - Unit Tests', () => {
       expect(calculateRegularity(70, 20)).toBe('EN ALERTA');
       expect(calculateRegularity(69, 20)).toBe('IRREGULAR');
       expect(calculateRegularity(0, 20)).toBe('IRREGULAR');
+    });
+
+    it('parseAttendanceDate should safely anchor YYYY-MM-DD date-only strings to noon', () => {
+      const parsed = parseAttendanceDate('2026-08-19');
+      expect(parsed.getFullYear()).toBe(2026);
+      expect(parsed.getMonth()).toBe(7); // August (0-indexed)
+      expect(parsed.getDate()).toBe(19);
+      expect(parsed.getHours()).toBe(12);
+
+      const parsedIso = parseAttendanceDate('2026-08-19T15:30:00.000Z');
+      expect(parsedIso.toISOString()).toBe('2026-08-19T15:30:00.000Z');
+
+      const now = new Date();
+      expect(parseAttendanceDate(null)).toBeInstanceOf(Date);
+      expect(parseAttendanceDate(undefined)).toBeInstanceOf(Date);
+      expect(parseAttendanceDate(now)).toBe(now);
+    });
+
+    it('resolveDayBounds should return start of day (00:00:00.000) and end of day (23:59:59.999)', () => {
+      const { startOfDay, endOfDay } = resolveDayBounds('2026-08-19');
+      expect(startOfDay.getFullYear()).toBe(2026);
+      expect(startOfDay.getMonth()).toBe(7);
+      expect(startOfDay.getDate()).toBe(19);
+      expect(startOfDay.getHours()).toBe(0);
+      expect(startOfDay.getMinutes()).toBe(0);
+      expect(startOfDay.getSeconds()).toBe(0);
+
+      expect(endOfDay.getFullYear()).toBe(2026);
+      expect(endOfDay.getMonth()).toBe(7);
+      expect(endOfDay.getDate()).toBe(19);
+      expect(endOfDay.getHours()).toBe(23);
+      expect(endOfDay.getMinutes()).toBe(59);
+      expect(endOfDay.getSeconds()).toBe(59);
+      expect(endOfDay.getMilliseconds()).toBe(999);
+    });
+
+    it('resolveDayBounds should throw BadRequestException for invalid date string', () => {
+      expect(() => resolveDayBounds('invalid-date-string')).toThrow(BadRequestException);
     });
   });
 
@@ -968,4 +1009,134 @@ describe('AttendanceService - Unit Tests', () => {
       expect(await service.resolvePeriodDateRange(undefined)).toBeNull();
     });
   });
+
+  describe('checkInByDocument', () => {
+    const mockStudent = {
+      id: 'student-doc-1',
+      firstName: 'Lucía',
+      lastName: 'Mendoza',
+      ci: '1234567',
+      status: 'active',
+    };
+
+    const mockCourse: Course = {
+      id: 'course-ballet',
+      name: 'Ballet Clásico',
+      level: 'Nivel Inicial',
+      capacity: 20,
+      year: 2026,
+      classCode: 'BAL-INI-2026',
+      teacher: null,
+      teacherId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      schedules: [],
+    };
+
+    it('should throw BadRequestException if CI is missing', async () => {
+      await expect(service.checkInByDocument({ ci: '' })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('should throw NotFoundException if student with CI is not found or inactive', async () => {
+      studentRepo.findOne.mockResolvedValue(null);
+      await expect(service.checkInByDocument({ ci: '999999' })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('should register ENTRADA for student by CI', async () => {
+      studentRepo.findOne.mockResolvedValue(mockStudent);
+      courseRepo.findOne.mockResolvedValue(mockCourse);
+      enrollmentRepo.find.mockResolvedValue([
+        { studentId: mockStudent.id, status: 'active', course: mockCourse },
+      ]);
+      attendanceRepo.findOne.mockResolvedValue(null);
+
+      const result = await service.checkInByDocument({ ci: '1234567' });
+      expect(result.success).toBe(true);
+      expect(result.studentName).toBe('Lucía Mendoza');
+      expect(result.type).toBe(AttendanceType.ENTRADA);
+    });
+
+    it('should normalize CI with dots (e.g. 1.234.567)', async () => {
+      studentRepo.findOne.mockResolvedValue(mockStudent);
+      courseRepo.findOne.mockResolvedValue(mockCourse);
+      enrollmentRepo.find.mockResolvedValue([
+        { studentId: mockStudent.id, status: 'active', course: mockCourse },
+      ]);
+      attendanceRepo.findOne.mockResolvedValue(null);
+
+      const result = await service.checkInByDocument({ ci: '1.234.567' });
+      expect(result.success).toBe(true);
+      expect(studentRepo.findOne).toHaveBeenCalledWith({
+        where: { ci: '1234567', status: 'active' },
+      });
+    });
+  });
+
+  describe('getAttendancesByDate', () => {
+    it('should return list of enrolled students with attendance state on a specific date', async () => {
+      const mockCourse = { id: 'course-1', name: 'Ballet' };
+      const student1 = { id: 's-1', firstName: 'Lucía', lastName: 'Mendoza', ci: '123456' };
+      const student2 = { id: 's-2', firstName: 'Ana', lastName: 'Ríos', ci: '654321' };
+
+      courseRepo.findOne.mockResolvedValue(mockCourse);
+      enrollmentRepo.find.mockResolvedValue([
+        { studentId: student1.id, student: student1, status: 'active' },
+        { studentId: student2.id, student: student2, status: 'active' },
+      ]);
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          {
+            id: 'att-1',
+            studentId: student1.id,
+            courseId: 'course-1',
+            type: AttendanceType.ENTRADA,
+            method: 'Biometric',
+            timestamp: new Date(2026, 7, 19, 16, 5),
+          },
+        ]),
+      };
+      attendanceRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getAttendancesByDate('course-1', '2026-08-19');
+
+      expect(result).toHaveLength(2);
+      const ana = result.find((r) => r.studentId === student2.id);
+      const lucia = result.find((r) => r.studentId === student1.id);
+
+      expect(lucia?.isPresent).toBe(true);
+      expect(lucia?.attendanceId).toBe('att-1');
+      expect(lucia?.method).toBe('Biometric');
+
+      expect(ana?.isPresent).toBe(false);
+      expect(ana?.attendanceId).toBeNull();
+    });
+  });
+
+  describe('deleteAttendance', () => {
+    it('should throw NotFoundException if attendance ID does not exist', async () => {
+      attendanceRepo.findOne.mockResolvedValue(null);
+      await expect(service.deleteAttendance('non-existent')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('should remove attendance successfully when ID exists', async () => {
+      const mockAtt = { id: 'att-123', studentId: 's-1' };
+      attendanceRepo.findOne.mockResolvedValue(mockAtt);
+      attendanceRepo.remove.mockResolvedValue(mockAtt);
+
+      const res = await service.deleteAttendance('att-123');
+      expect(res.success).toBe(true);
+      expect(attendanceRepo.remove).toHaveBeenCalledWith(mockAtt);
+    });
+  });
 });
+

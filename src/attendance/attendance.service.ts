@@ -14,6 +14,7 @@ import { Enrollment } from '../students/entities/enrollment.entity';
 import { Course } from '../courses/entities/course.entity';
 import { CourseSchedule } from '../courses/entities/course-schedule.entity';
 import { ManualAttendanceDto } from './dto/manual-attendance.dto';
+import { DocumentCheckInDto } from './dto/document-checkin.dto';
 import { AcademicPeriodsService } from '../academic-periods/academic-periods.service';
 import { EvaluationStage } from '../academic-periods/entities/academic-period.entity';
 
@@ -228,6 +229,52 @@ export function getZonedDateKey(
 }
 
 /**
+ * Safely parses any date input (YYYY-MM-DD string, full ISO timestamp, or Date)
+ * into a valid Date object. For date-only strings (YYYY-MM-DD), it anchors to midday (12:00:00)
+ * in order to prevent negative UTC offset timezone shifts.
+ */
+export function parseAttendanceDate(
+  input?: string | Date | null,
+  timeZone: string = DEFAULT_TIMEZONE,
+): Date {
+  if (!input) return new Date();
+  if (input instanceof Date) return input;
+
+  const trimmed = input.trim();
+  if (!trimmed) return new Date();
+
+  // If date-only string (YYYY-MM-DD), anchor at midday local time
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [y, m, d] = trimmed.split('-').map((v) => parseInt(v, 10));
+    return new Date(y, m - 1, d, 12, 0, 0, 0);
+  }
+
+  const parsed = new Date(trimmed);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+/**
+ * Resolves the [startOfDay, endOfDay] bounds for a given date in the target timezone.
+ */
+export function resolveDayBounds(
+  dateInput: string | Date,
+  timeZone: string = DEFAULT_TIMEZONE,
+): { startOfDay: Date; endOfDay: Date } {
+  if (typeof dateInput === 'string') {
+    const clean = dateInput.trim();
+    if (!/^\d{4}-\d{2}-\d{2}/.test(clean) && isNaN(Date.parse(clean))) {
+      throw new BadRequestException('Formato de fecha inválido. Debe ser YYYY-MM-DD');
+    }
+  }
+  const baseDate = parseAttendanceDate(dateInput, timeZone);
+  const startOfDay = getZonedStartOfDay(baseDate, timeZone);
+  const endOfDay = new Date(startOfDay);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  return { startOfDay, endOfDay };
+}
+
+/**
  * Resolves start and end date boundaries synchronously using standard default calendar dates.
  */
 export function resolvePeriodDateRange(
@@ -295,6 +342,7 @@ export interface ReportItem {
   salidas: number;
   percentage: number;
   classesHeld?: number;
+  classesScheduled?: number;
   regularity?: 'REGULAR' | 'EN ALERTA' | 'IRREGULAR';
   presentCount?: number;
   absentCount?: number;
@@ -620,7 +668,7 @@ export class AttendanceService {
       throw new NotFoundException('Curso no encontrado');
     }
 
-    const attendanceDate = dto.timestamp ? new Date(dto.timestamp) : new Date();
+    const attendanceDate = parseAttendanceDate(dto.timestamp, timeZone);
     const todayStart = getZonedStartOfDay(attendanceDate, timeZone);
 
     let type = dto.type;
@@ -664,6 +712,165 @@ export class AttendanceService {
     };
   }
 
+  async checkInByDocument(
+    dto: DocumentCheckInDto,
+    timeZone: string = DEFAULT_TIMEZONE,
+  ): Promise<BiometricCheckInResponse> {
+    const cleanCi = dto.ci ? dto.ci.trim().replace(/\./g, '') : '';
+    if (!cleanCi) {
+      throw new BadRequestException('Debe ingresar la Cédula de Identidad');
+    }
+
+    const student = await this.studentRepository.findOne({
+      where: { ci: cleanCi, status: 'active' },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Alumno no encontrado o inactivo');
+    }
+
+    const now = new Date();
+    let course: Course | null = null;
+
+    if (dto.courseId) {
+      course = await this.courseRepository.findOne({ where: { id: dto.courseId } });
+    }
+
+    if (!course) {
+      course = await this.resolveCourseForStudent(student.id, now, timeZone);
+    }
+
+    const todayStart = getZonedStartOfDay(now, timeZone);
+    const whereClause: FindOptionsWhere<Attendance> = {
+      studentId: student.id,
+      timestamp: MoreThan(todayStart),
+      courseId: course ? course.id : IsNull(),
+    };
+
+    const lastAttendance = await this.attendanceRepository.findOne({
+      where: whereClause,
+      order: { timestamp: 'DESC' },
+    });
+
+    let type = dto.type || AttendanceType.ENTRADA;
+    if (!dto.type && lastAttendance && lastAttendance.type === AttendanceType.ENTRADA) {
+      const elapsedMs = now.getTime() - new Date(lastAttendance.timestamp).getTime();
+      if (elapsedMs < MIN_CHECKOUT_INTERVAL_MS) {
+        return {
+          success: true,
+          message: 'Asistencia ya registrada recientemente (Entrada)',
+          studentName: `${student.firstName} ${student.lastName}`,
+          courseName: course ? `${course.name} - ${course.level}` : undefined,
+          courseId: course ? course.id : null,
+          timestamp: lastAttendance.timestamp,
+          type: lastAttendance.type,
+        };
+      }
+      type = AttendanceType.SALIDA;
+    }
+
+    const attendance = this.attendanceRepository.create({
+      student,
+      studentId: student.id,
+      course,
+      courseId: course ? course.id : null,
+      type,
+      method: 'Document',
+      timestamp: now,
+    });
+
+    const saved = await this.attendanceRepository.save(attendance);
+
+    return {
+      success: true,
+      message: `Asistencia registrada correctamente (${type})`,
+      studentName: `${student.firstName} ${student.lastName}`,
+      courseName: course ? `${course.name} - ${course.level}` : undefined,
+      courseId: course ? course.id : null,
+      timestamp: saved.timestamp,
+      type: saved.type,
+    };
+  }
+
+  async getAttendancesByDate(
+    courseId: string,
+    dateStr: string,
+    timeZone: string = DEFAULT_TIMEZONE,
+  ): Promise<
+    {
+      studentId: string;
+      studentName: string;
+      ci: string;
+      isPresent: boolean;
+      attendanceId: string | null;
+      timestamp: Date | null;
+      type: AttendanceType | null;
+      method: string | null;
+    }[]
+  > {
+    if (!courseId) {
+      throw new BadRequestException('El parámetro courseId es obligatorio');
+    }
+    if (!dateStr || !dateStr.trim()) {
+      throw new BadRequestException('El parámetro date es obligatorio');
+    }
+
+    const course = await this.courseRepository.findOne({ where: { id: courseId } });
+    if (!course) {
+      throw new NotFoundException('Curso no encontrado');
+    }
+
+    const { startOfDay, endOfDay } = resolveDayBounds(dateStr, timeZone);
+
+    const enrollments = await this.enrollmentRepository.find({
+      where: { courseId, status: 'active' },
+      relations: { student: true },
+    });
+
+    const query = this.attendanceRepository
+      .createQueryBuilder('attendance')
+      .where('attendance.courseId = :courseId', { courseId })
+      .andWhere('attendance.timestamp >= :startOfDay', { startOfDay })
+      .andWhere('attendance.timestamp <= :endOfDay', { endOfDay })
+      .orderBy('attendance.timestamp', 'ASC');
+
+    const attendances = await query.getMany();
+
+    const studentAttMap = new Map<string, Attendance>();
+    attendances.forEach((att) => {
+      if (!studentAttMap.has(att.studentId) || att.type === AttendanceType.ENTRADA) {
+        studentAttMap.set(att.studentId, att);
+      }
+    });
+
+    const result = enrollments.map((e) => {
+      const student = e.student;
+      const att = studentAttMap.get(e.studentId);
+      return {
+        studentId: e.studentId,
+        studentName: student ? `${student.firstName} ${student.lastName}`.trim() : 'Estudiante',
+        ci: student ? student.ci : '',
+        isPresent: Boolean(att),
+        attendanceId: att ? att.id : null,
+        timestamp: att ? att.timestamp : null,
+        type: att ? att.type : null,
+        method: att ? att.method : null,
+      };
+    });
+
+    result.sort((a, b) => a.studentName.localeCompare(b.studentName));
+    return result;
+  }
+
+  async deleteAttendance(id: string): Promise<{ success: boolean; message: string }> {
+    const attendance = await this.attendanceRepository.findOne({ where: { id } });
+    if (!attendance) {
+      throw new NotFoundException('Registro de asistencia no encontrado');
+    }
+    await this.attendanceRepository.remove(attendance);
+    return { success: true, message: 'Asistencia anulada correctamente' };
+  }
+
   async getReports(
     courseId?: string,
     period?: string,
@@ -678,6 +885,7 @@ export class AttendanceService {
     // 1. Resolve date range from period or course year
     const course = await this.courseRepository.findOne({
       where: { id: courseId },
+      relations: { schedules: true },
     });
     if (!course) {
       throw new NotFoundException('Curso no encontrado');
@@ -689,7 +897,30 @@ export class AttendanceService {
       defaultYear,
     );
 
-    // 2. Fetch active enrollments to ensure all enrolled students are included
+    // 2. Calculate scheduled classes theoretically based on CourseSchedule days in the date range
+    let classesScheduled = 0;
+    if (dateRange && course.schedules && course.schedules.length > 0) {
+      const scheduledDaysSet = new Set<string>();
+      course.schedules.forEach((sch) => {
+        if (sch.dayOfWeek) {
+          scheduledDaysSet.add(normalizeDay(sch.dayOfWeek));
+        }
+      });
+
+      const today = new Date();
+      const endBoundary = dateRange.endDate < today ? dateRange.endDate : today;
+      const curr = new Date(dateRange.startDate);
+      
+      while (curr <= endBoundary) {
+        const dayName = getZonedDayName(curr);
+        if (scheduledDaysSet.has(dayName)) {
+          classesScheduled++;
+        }
+        curr.setDate(curr.getDate() + 1);
+      }
+    }
+
+    // 3. Fetch active enrollments to ensure all enrolled students are included
     const enrolledStudentsMap = new Map<
       string,
       {
@@ -718,7 +949,7 @@ export class AttendanceService {
       }
     }
 
-    // 3. Query attendances
+    // 4. Query attendances
     const query = this.attendanceRepository
       .createQueryBuilder('attendance')
       .leftJoinAndSelect('attendance.student', 'student')
@@ -739,7 +970,7 @@ export class AttendanceService {
 
     const attendances = await query.getMany();
 
-    // 4. Determine classes held: distinct calendar dates where attendance (ENTRADA) was registered
+    // 5. Determine classes held: distinct calendar dates where attendance (ENTRADA) was registered
     const distinctClassDates = new Set<string>();
 
     attendances.forEach((att) => {
@@ -773,7 +1004,7 @@ export class AttendanceService {
 
     const classesHeld = distinctClassDates.size;
 
-    // 5. Calculate percentage and regularity without bias
+    // 6. Calculate percentage and regularity without bias
     const result: ReportItem[] = Array.from(enrolledStudentsMap.entries()).map(
       ([studentId, stats]) => {
         const attendedDaysCount = stats.attendedDays.size;
@@ -796,6 +1027,7 @@ export class AttendanceService {
           salidas: stats.salida,
           percentage,
           classesHeld,
+          classesScheduled: Math.max(classesHeld, classesScheduled),
           regularity,
           presentCount: stats.entrada,
           absentCount: Math.max(0, classesHeld - attendedDaysCount),

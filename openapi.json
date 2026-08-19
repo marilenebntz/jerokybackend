@@ -641,6 +641,47 @@
       "post": {
         "operationId": "AttendanceController_checkInBiometric",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BiometricCheckInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/attendance/document": {
+      "post": {
+        "operationId": "AttendanceController_checkInByDocument",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentCheckInDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -674,6 +715,37 @@
         },
         "responses": {
           "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/attendance/by-date": {
+      "get": {
+        "operationId": "AttendanceController_getAttendancesByDate",
+        "parameters": [
+          {
+            "name": "courseId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": ""
           }
         },
@@ -724,6 +796,29 @@
                 }
               }
             }
+          }
+        },
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/attendance/{id}": {
+      "delete": {
+        "operationId": "AttendanceController_deleteAttendance",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
           }
         },
         "tags": [
@@ -1488,6 +1583,7 @@
         },
         "required": [
           "email",
+          "password",
           "role"
         ]
       },
@@ -2013,6 +2109,41 @@
             }
           }
         }
+      },
+      "BiometricCheckInDto": {
+        "type": "object",
+        "properties": {
+          "image": {
+            "type": "string",
+            "description": "Imagen capturada por cámara en formato Base64",
+            "example": "data:image/jpeg;base64,..."
+          }
+        },
+        "required": [
+          "image"
+        ]
+      },
+      "DocumentCheckInDto": {
+        "type": "object",
+        "properties": {
+          "ci": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Entrada",
+              "Salida"
+            ]
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "ci"
+        ]
       },
       "ManualAttendanceDto": {
         "type": "object",
