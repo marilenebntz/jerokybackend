@@ -26,6 +26,9 @@ export class Communication {
   @Column({ type: 'simple-array' })
   channels: string[]; // 'Web', 'Email'
 
+  @Column({ type: 'varchar', nullable: true })
+  courseId: string | null;
+
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   sender: User;
 

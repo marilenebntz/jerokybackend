@@ -11,6 +11,7 @@ import { Tutor } from './entities/tutor.entity';
 import { Enrollment } from './entities/enrollment.entity';
 import { Course } from '../courses/entities/course.entity';
 import { CreateStudentDto } from './dto/create-student.dto';
+import { UpdateStudentDto } from './dto/update-student.dto';
 import { EnrollStudentDto } from './dto/enroll-student.dto';
 
 @Injectable()
@@ -103,6 +104,105 @@ export class StudentsService {
       throw new NotFoundException('Alumno no encontrado');
     }
     return student;
+  }
+
+  async update(
+    id: string,
+    updateStudentDto: UpdateStudentDto,
+  ): Promise<Student> {
+    const student = await this.findOne(id);
+
+    if (updateStudentDto.ci && updateStudentDto.ci !== student.ci) {
+      const existing = await this.studentRepository.findOne({
+        where: { ci: updateStudentDto.ci },
+      });
+      if (existing && existing.id !== id) {
+        throw new ConflictException('La CI ya está registrada en el sistema');
+      }
+      student.ci = updateStudentDto.ci;
+    }
+
+    if (updateStudentDto.firstName !== undefined) {
+      student.firstName = updateStudentDto.firstName;
+    }
+    if (updateStudentDto.lastName !== undefined) {
+      student.lastName = updateStudentDto.lastName;
+    }
+    if (updateStudentDto.birthDate !== undefined) {
+      student.birthDate = new Date(updateStudentDto.birthDate);
+    }
+    if (updateStudentDto.encryptedMedicalInfo !== undefined) {
+      student.encryptedMedicalInfo = updateStudentDto.encryptedMedicalInfo || null;
+    }
+    if (updateStudentDto.biometricConsent !== undefined) {
+      student.biometricConsent = updateStudentDto.biometricConsent;
+    }
+    if (updateStudentDto.status !== undefined) {
+      student.status = updateStudentDto.status;
+    }
+
+    if (updateStudentDto.tutorId !== undefined) {
+      if (updateStudentDto.tutorId) {
+        const tutor = await this.tutorRepository.findOne({
+          where: { id: updateStudentDto.tutorId },
+        });
+        if (!tutor) {
+          throw new NotFoundException('El tutor vinculado no existe');
+        }
+        student.tutor = tutor;
+      } else {
+        student.tutor = null;
+      }
+    } else if (updateStudentDto.tutor) {
+      let tutor: Tutor | null = null;
+      const existingTutor = await this.tutorRepository.findOne({
+        where: { ci: updateStudentDto.tutor.ci },
+      });
+      if (existingTutor) {
+        tutor = existingTutor;
+      } else {
+        tutor = this.tutorRepository.create(updateStudentDto.tutor);
+        tutor = await this.tutorRepository.save(tutor);
+      }
+      student.tutor = tutor;
+    }
+
+    // Check minor requirement
+    if (student.birthDate) {
+      const birthDateObj = new Date(student.birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - birthDateObj.getFullYear();
+      const monthDiff = today.getMonth() - birthDateObj.getMonth();
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthDateObj.getDate())
+      ) {
+        age--;
+      }
+      if (age < 18 && !student.tutor) {
+        throw new BadRequestException(
+          'El estudiante es menor de edad y requiere tener un Tutor asignado',
+        );
+      }
+    }
+
+    return this.studentRepository.save(student);
+  }
+
+  async updateStatus(id: string, status: string): Promise<Student> {
+    const student = await this.findOne(id);
+    if (!['active', 'inactive'].includes(status)) {
+      throw new BadRequestException("Estado inválido. Debe ser 'active' o 'inactive'");
+    }
+    student.status = status;
+    return this.studentRepository.save(student);
+  }
+
+  async remove(id: string): Promise<{ success: boolean; message: string }> {
+    const student = await this.findOne(id);
+    student.status = 'inactive';
+    await this.studentRepository.save(student);
+    return { success: true, message: 'Alumno inactivado exitosamente' };
   }
 
   async updateBiometricTemplate(id: string, faceId: string): Promise<Student> {

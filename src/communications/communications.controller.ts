@@ -18,13 +18,13 @@ import { UserRole } from '../users/entities/user.entity';
 export class CommunicationsController {
   constructor(private readonly communicationsService: CommunicationsService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.DIRECTOR, UserRole.DOCENTE, UserRole.OPERADOR)
+  @Roles(UserRole.ADMIN, UserRole.DOCENTE, UserRole.OPERADOR)
   @Post()
   async create(@Body() dto: CreateCommunicationDto, @Request() req: any) {
     return this.communicationsService.create(dto, req.user.id);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.DIRECTOR, UserRole.OPERADOR)
+  @Roles(UserRole.ADMIN, UserRole.OPERADOR)
   @Get('logs')
   async getLogs() {
     return this.communicationsService.getLogs();
@@ -32,7 +32,6 @@ export class CommunicationsController {
 
   @Roles(
     UserRole.ADMIN,
-    UserRole.DIRECTOR,
     UserRole.DOCENTE,
     UserRole.OPERADOR,
     UserRole.ALUMNO,

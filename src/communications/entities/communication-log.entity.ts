@@ -19,11 +19,20 @@ export class CommunicationLog {
   @Column()
   communicationId: string;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  recipient: User;
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  recipient: User | null;
 
-  @Column()
-  recipientId: string;
+  @Column({ type: 'varchar', nullable: true })
+  recipientId: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  recipientEmail: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  recipientName: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  recipientRole: string;
 
   @Column()
   channel: string; // 'Web', 'Email'

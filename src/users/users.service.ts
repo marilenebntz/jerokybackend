@@ -59,4 +59,42 @@ export class UsersService {
     user.role = role;
     return this.userRepository.save(user);
   }
+
+  async update(
+    id: string,
+    data: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      role?: UserRole;
+    },
+  ): Promise<User> {
+    const user = await this.findOneById(id);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (data.email && data.email !== user.email) {
+      const existing = await this.findOneByEmail(data.email);
+      if (existing && existing.id !== id) {
+        throw new ConflictException('El email ya está en uso');
+      }
+      user.email = data.email;
+    }
+
+    if (data.firstName !== undefined) user.firstName = data.firstName;
+    if (data.lastName !== undefined) user.lastName = data.lastName;
+    if (data.role !== undefined) user.role = data.role;
+
+    return this.userRepository.save(user);
+  }
+
+  async updateStatus(id: string, isActive: boolean): Promise<User> {
+    const user = await this.findOneById(id);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    user.isActive = isActive;
+    return this.userRepository.save(user);
+  }
 }

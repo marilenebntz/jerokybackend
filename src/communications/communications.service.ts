@@ -3,7 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Communication } from './entities/communication.entity';
 import { CommunicationLog } from './entities/communication-log.entity';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
+import { Tutor } from '../students/entities/tutor.entity';
+import { Enrollment } from '../students/entities/enrollment.entity';
 import { CreateCommunicationDto } from './dto/create-communication.dto';
 
 @Injectable()
@@ -15,6 +17,10 @@ export class CommunicationsService {
     private readonly logRepository: Repository<CommunicationLog>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Tutor)
+    private readonly tutorRepository: Repository<Tutor>,
+    @InjectRepository(Enrollment)
+    private readonly enrollmentRepository: Repository<Enrollment>,
   ) {}
 
   async create(
@@ -22,30 +28,78 @@ export class CommunicationsService {
     senderId: string,
   ): Promise<Communication> {
     const communication = this.communicationRepository.create({
-      ...dto,
+      subject: dto.subject,
+      body: dto.body,
+      targetRoles: dto.targetRoles,
+      channels: dto.channels,
+      courseId: dto.courseId || null,
       senderId,
     });
 
     const saved = await this.communicationRepository.save(communication);
-
-    // Find all users in target roles
-    const recipients = await this.userRepository.find({
-      where: { role: In(dto.targetRoles), isActive: true },
-    });
-
-    // Create logs for each recipient and each selected channel
     const logs: CommunicationLog[] = [];
-    for (const recipient of recipients) {
-      for (const channel of dto.channels) {
-        const log = this.logRepository.create({
-          communication: saved,
-          communicationId: saved.id,
-          recipient,
-          recipientId: recipient.id,
-          channel,
-          status: 'delivered', // simulated immediate delivery
+
+    const hasTutorRole = dto.targetRoles.includes(UserRole.TUTOR);
+    const systemRoles = dto.targetRoles.filter((r) => r !== UserRole.TUTOR);
+
+    // 1. If Tutor is in target roles, fetch tutors from tutors table
+    if (hasTutorRole) {
+      let tutorsToNotify: Tutor[] = [];
+      if (dto.courseId) {
+        const enrollments = await this.enrollmentRepository.find({
+          where: { courseId: dto.courseId, status: 'active' },
+          relations: { student: { tutor: true } },
         });
-        logs.push(log);
+        const tutorMap = new Map<string, Tutor>();
+        for (const e of enrollments) {
+          if (e.student?.tutor) {
+            tutorMap.set(e.student.tutor.id, e.student.tutor);
+          }
+        }
+        tutorsToNotify = Array.from(tutorMap.values());
+      } else {
+        tutorsToNotify = await this.tutorRepository.find();
+      }
+
+      for (const tutor of tutorsToNotify) {
+        for (const channel of dto.channels) {
+          const log = this.logRepository.create({
+            communication: saved,
+            communicationId: saved.id,
+            recipient: null,
+            recipientId: tutor.id,
+            recipientEmail: tutor.email,
+            recipientName: `${tutor.firstName} ${tutor.lastName}`,
+            recipientRole: 'Tutor',
+            channel,
+            status: 'delivered',
+          });
+          logs.push(log);
+        }
+      }
+    }
+
+    // 2. For system roles, fetch users from users table
+    if (systemRoles.length > 0) {
+      const recipients = await this.userRepository.find({
+        where: { role: In(systemRoles), isActive: true },
+      });
+
+      for (const recipient of recipients) {
+        for (const channel of dto.channels) {
+          const log = this.logRepository.create({
+            communication: saved,
+            communicationId: saved.id,
+            recipient,
+            recipientId: recipient.id,
+            recipientEmail: recipient.email,
+            recipientName: `${recipient.firstName || ''} ${recipient.lastName || ''}`.trim() || recipient.email,
+            recipientRole: recipient.role,
+            channel,
+            status: 'delivered',
+          });
+          logs.push(log);
+        }
       }
     }
 

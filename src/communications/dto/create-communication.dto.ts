@@ -4,6 +4,7 @@ import {
   IsArray,
   ArrayNotEmpty,
   Length,
+  IsOptional,
 } from 'class-validator';
 import { UserRole } from '../../users/entities/user.entity';
 
@@ -27,4 +28,8 @@ export class CreateCommunicationDto {
   @IsArray({ message: 'Los canales de comunicación deben ser un arreglo' })
   @ArrayNotEmpty({ message: 'Debe especificar al menos un canal' })
   channels: string[]; // 'Web', 'Email'
+
+  @IsOptional()
+  @IsString()
+  courseId?: string;
 }

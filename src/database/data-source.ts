@@ -13,6 +13,7 @@ import { Grade } from '../grades/entities/grade.entity';
 import { Communication } from '../communications/entities/communication.entity';
 import { CommunicationLog } from '../communications/entities/communication-log.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
+import { AcademicPeriod } from '../academic-periods/entities/academic-period.entity';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -35,6 +36,7 @@ export const dataSourceOptions: DataSourceOptions = {
     Communication,
     CommunicationLog,
     AuditLog,
+    AcademicPeriod,
   ],
   migrations: [path.join(__dirname, 'migrations', '*{.ts,.js}')],
   synchronize: false,

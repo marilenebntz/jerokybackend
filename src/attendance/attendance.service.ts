@@ -2,15 +2,20 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, IsNull, FindOptionsWhere } from 'typeorm';
+import { isUUID } from 'class-validator';
 import { Attendance, AttendanceType } from './entities/attendance.entity';
 import { Student } from '../students/entities/student.entity';
 import { FacesService } from '../faces/faces.service';
 import { Enrollment } from '../students/entities/enrollment.entity';
 import { Course } from '../courses/entities/course.entity';
 import { CourseSchedule } from '../courses/entities/course-schedule.entity';
+import { ManualAttendanceDto } from './dto/manual-attendance.dto';
+import { AcademicPeriodsService } from '../academic-periods/academic-periods.service';
+import { EvaluationStage } from '../academic-periods/entities/academic-period.entity';
 
 /** Default timezone for the academy (Paraguay: America/Asuncion) */
 export const DEFAULT_TIMEZONE =
@@ -45,6 +50,73 @@ export function normalizeDay(day: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Normalizes an arbitrary period / stage string to the canonical EvaluationStage enum.
+ */
+export function normalizeStageName(period?: string): EvaluationStage | null {
+  if (!period) return null;
+  const p = period.toLowerCase().trim();
+
+  if (p.includes('recuperatorio') || p.includes('recup')) {
+    return EvaluationStage.RECUPERATORIO;
+  }
+  if (p.includes('examen') || p.includes('final')) {
+    return EvaluationStage.EXAMEN_FINAL;
+  }
+  if (
+    /[-_ ](ii|2)$/i.test(p) ||
+    /2[aª]?\s*etapa/i.test(p) ||
+    /etapa\s*2/i.test(p) ||
+    p.includes('2ª etapa') ||
+    p.includes('2a etapa') ||
+    p.includes('segund')
+  ) {
+    return EvaluationStage.ETAPA_2;
+  }
+  if (
+    /[-_ ](i|1)$/i.test(p) ||
+    /1[aª]?\s*etapa/i.test(p) ||
+    /etapa\s*1/i.test(p) ||
+    p.includes('1ª etapa') ||
+    p.includes('1a etapa') ||
+    p.includes('primer')
+  ) {
+    return EvaluationStage.ETAPA_1;
+  }
+  return null;
+}
+
+/**
+ * Returns default Paraguayan academic dates for each stage in a given year.
+ */
+export function resolveDefaultStageDates(
+  stage: EvaluationStage,
+  year: number,
+): { startDate: Date; endDate: Date } {
+  switch (stage) {
+    case EvaluationStage.ETAPA_1:
+      return {
+        startDate: new Date(year, 1, 1, 0, 0, 0, 0), // Feb 1
+        endDate: new Date(year, 5, 30, 23, 59, 59, 999), // Jun 30
+      };
+    case EvaluationStage.ETAPA_2:
+      return {
+        startDate: new Date(year, 6, 1, 0, 0, 0, 0), // Jul 1
+        endDate: new Date(year, 9, 31, 23, 59, 59, 999), // Oct 31
+      };
+    case EvaluationStage.EXAMEN_FINAL:
+      return {
+        startDate: new Date(year, 10, 1, 0, 0, 0, 0), // Nov 1
+        endDate: new Date(year, 10, 30, 23, 59, 59, 999), // Nov 30
+      };
+    case EvaluationStage.RECUPERATORIO:
+      return {
+        startDate: new Date(year, 11, 1, 0, 0, 0, 0), // Dec 1
+        endDate: new Date(year, 11, 15, 23, 59, 59, 999), // Dec 15
+      };
+  }
 }
 
 /**
@@ -156,7 +228,7 @@ export function getZonedDateKey(
 }
 
 /**
- * Resolves start and end date boundaries for a given academic period string (e.g. "2026-I", "2026-II", "1ª Etapa", "2026").
+ * Resolves start and end date boundaries synchronously using standard default calendar dates.
  */
 export function resolvePeriodDateRange(
   period?: string,
@@ -170,30 +242,13 @@ export function resolvePeriodDateRange(
   const yearMatch = trimmed.match(/(\d{4})/);
   const year = yearMatch ? parseInt(yearMatch[1], 10) : defaultYear;
 
-  const isFirstStage =
-    /[-_ ](I|1)$/i.test(trimmed) ||
-    /1[aª]?\s*etapa/i.test(trimmed) ||
-    /primer[oa]?/i.test(trimmed);
-  const isSecondStage =
-    /[-_ ](II|2)$/i.test(trimmed) ||
-    /2[aª]?\s*etapa/i.test(trimmed) ||
-    /segund[oa]?/i.test(trimmed);
-
-  if (isFirstStage) {
-    return {
-      startDate: new Date(year, 0, 1, 0, 0, 0, 0),
-      endDate: new Date(year, 5, 30, 23, 59, 59, 999),
-    };
+  const stage = normalizeStageName(trimmed);
+  if (stage) {
+    return resolveDefaultStageDates(stage, year);
   }
 
-  if (isSecondStage) {
-    return {
-      startDate: new Date(year, 6, 1, 0, 0, 0, 0),
-      endDate: new Date(year, 11, 31, 23, 59, 59, 999),
-    };
-  }
-
-  if (yearMatch) {
+  const lower = trimmed.toLowerCase();
+  if (lower.includes('ciclo') || lower.includes('completo') || yearMatch) {
     return {
       startDate: new Date(year, 0, 1, 0, 0, 0, 0),
       endDate: new Date(year, 11, 31, 23, 59, 59, 999),
@@ -204,7 +259,7 @@ export function resolvePeriodDateRange(
 }
 
 /**
- * Classifies attendance regularity based on institutional thresholds (>= 75% Regular, 70-74% En Alerta, < 70% Irregular).
+ * Classifies attendance regularity based on thesis threshold (>= 75% Regular, 70-74% En Alerta, < 70% Irregular).
  */
 export function calculateRegularity(
   percentage: number,
@@ -241,6 +296,9 @@ export interface ReportItem {
   percentage: number;
   classesHeld?: number;
   regularity?: 'REGULAR' | 'EN ALERTA' | 'IRREGULAR';
+  presentCount?: number;
+  absentCount?: number;
+  status?: string;
 }
 
 interface ScheduleMatch {
@@ -263,7 +321,95 @@ export class AttendanceService {
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
     private readonly facesService: FacesService,
+    @Optional()
+    private readonly academicPeriodsService?: AcademicPeriodsService,
   ) {}
+
+  /**
+   * Resolves start and end date boundaries asynchronously by querying AcademicPeriodsService
+   * with fallback to standard Paraguayan calendar dates.
+   * Supports both (year, periodName) and (periodName, defaultYear) call signatures.
+   */
+  async resolvePeriodDateRange(
+    arg1?: string | number,
+    arg2?: string | number,
+  ): Promise<{ startDate: Date; endDate: Date } | null> {
+    let year: number = new Date().getFullYear();
+    let period: string | undefined;
+
+    if (typeof arg1 === 'number') {
+      year = arg1;
+      period = typeof arg2 === 'string' ? arg2 : undefined;
+    } else if (typeof arg1 === 'string') {
+      period = arg1;
+      year = typeof arg2 === 'number' ? arg2 : new Date().getFullYear();
+    } else if (typeof arg2 === 'number') {
+      year = arg2;
+    }
+
+    if (!period || typeof period !== 'string' || period.trim() === '') {
+      return null;
+    }
+
+    const trimmed = period.trim();
+    const yearMatch = trimmed.match(/(\d{4})/);
+    if (yearMatch && typeof arg1 !== 'number' && typeof arg2 !== 'number') {
+      year = parseInt(yearMatch[1], 10);
+    }
+
+    const normalizedStage = normalizeStageName(trimmed);
+
+    if (normalizedStage) {
+      if (this.academicPeriodsService) {
+        try {
+          const periodRecord =
+            await this.academicPeriodsService.findByYearAndStage(
+              year,
+              normalizedStage,
+            );
+          if (periodRecord && periodRecord.startDate && periodRecord.endDate) {
+            const [sYear, sMonth, sDay] = periodRecord.startDate
+              .toString()
+              .split('-')
+              .map((v) => parseInt(v, 10));
+            const [eYear, eMonth, eDay] = periodRecord.endDate
+              .toString()
+              .split('-')
+              .map((v) => parseInt(v, 10));
+
+            return {
+              startDate: new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0),
+              endDate: new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999),
+            };
+          }
+        } catch {
+          // Graceful fallback to defaults
+        }
+      }
+
+      return resolveDefaultStageDates(normalizedStage, year);
+    }
+
+    const lower = trimmed.toLowerCase();
+    if (lower.includes('ciclo') || lower.includes('completo') || yearMatch) {
+      return {
+        startDate: new Date(year, 0, 1, 0, 0, 0, 0),
+        endDate: new Date(year, 11, 31, 23, 59, 59, 999),
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Alias for backwards compatibility
+   */
+  async resolvePeriodDateRangeAsync(
+    period?: string,
+    defaultYear: number = new Date().getFullYear(),
+  ): Promise<{ startDate: Date; endDate: Date } | null> {
+    return this.resolvePeriodDateRange(period, defaultYear);
+  }
 
   /**
    * Resolves the most appropriate active Course for a student at a given timestamp
@@ -448,9 +594,80 @@ export class AttendanceService {
     };
   }
 
+  async checkInManual(
+    dto: ManualAttendanceDto,
+    timeZone: string = DEFAULT_TIMEZONE,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    studentName: string;
+    courseName?: string;
+    timestamp: Date;
+    type: AttendanceType;
+    method: string;
+  }> {
+    const student = await this.studentRepository.findOne({
+      where: { id: dto.studentId },
+    });
+    if (!student) {
+      throw new NotFoundException('Alumno no encontrado');
+    }
+
+    const course = await this.courseRepository.findOne({
+      where: { id: dto.courseId },
+    });
+    if (!course) {
+      throw new NotFoundException('Curso no encontrado');
+    }
+
+    const attendanceDate = dto.timestamp ? new Date(dto.timestamp) : new Date();
+    const todayStart = getZonedStartOfDay(attendanceDate, timeZone);
+
+    let type = dto.type;
+    if (!type) {
+      const lastAttendance = await this.attendanceRepository.findOne({
+        where: {
+          studentId: student.id,
+          courseId: course.id,
+          timestamp: MoreThan(todayStart),
+        },
+        order: { timestamp: 'DESC' },
+      });
+
+      if (lastAttendance && lastAttendance.type === AttendanceType.ENTRADA) {
+        type = AttendanceType.SALIDA;
+      } else {
+        type = AttendanceType.ENTRADA;
+      }
+    }
+
+    const attendance = this.attendanceRepository.create({
+      student,
+      studentId: student.id,
+      course,
+      courseId: course.id,
+      type,
+      method: 'Manual',
+      timestamp: attendanceDate,
+    });
+
+    const saved = await this.attendanceRepository.save(attendance);
+
+    return {
+      success: true,
+      message: `Asistencia registrada manualmente (${type})`,
+      studentName: `${student.firstName} ${student.lastName}`,
+      courseName: `${course.name} - ${course.level}`,
+      timestamp: saved.timestamp,
+      type: saved.type,
+      method: 'Manual',
+    };
+  }
+
   async getReports(
     courseId?: string,
     period?: string,
+    year?: number,
   ): Promise<ReportItem[]> {
     if (!courseId) {
       throw new BadRequestException(
@@ -466,8 +683,11 @@ export class AttendanceService {
       throw new NotFoundException('Curso no encontrado');
     }
 
-    const defaultYear = course.year || new Date().getFullYear();
-    const dateRange = resolvePeriodDateRange(period, defaultYear);
+    const defaultYear = year || course.year || new Date().getFullYear();
+    const dateRange = await this.resolvePeriodDateRange(
+      period,
+      defaultYear,
+    );
 
     // 2. Fetch active enrollments to ensure all enrolled students are included
     const enrolledStudentsMap = new Map<
@@ -577,6 +797,9 @@ export class AttendanceService {
           percentage,
           classesHeld,
           regularity,
+          presentCount: stats.entrada,
+          absentCount: Math.max(0, classesHeld - attendedDaysCount),
+          status: regularity,
         };
       },
     );
@@ -588,12 +811,13 @@ export class AttendanceService {
   }
 
   private getBufferFromBase64(base64Str: string): Buffer {
+    if (!base64Str || typeof base64Str !== 'string') {
+      throw new BadRequestException('Formato de imagen Base64 inválido');
+    }
+    const commaIndex = base64Str.indexOf(',');
+    const data =
+      commaIndex !== -1 ? base64Str.slice(commaIndex + 1) : base64Str;
     try {
-      const matches = base64Str.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
-      let data = base64Str;
-      if (matches && matches.length === 3) {
-        data = matches[2];
-      }
       return Buffer.from(data, 'base64');
     } catch {
       throw new BadRequestException('Formato de imagen Base64 inválido');
