@@ -1,7 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { Grade } from './entities/grade.entity';
+import { Grade, EvaluationStage } from './entities/grade.entity';
 import { GradeUploadItemDto } from './dto/upload-grades-batch.dto';
 import { Student } from '../students/entities/student.entity';
 import { Course } from '../courses/entities/course.entity';
@@ -17,13 +21,39 @@ export class GradesService {
     private readonly courseRepository: Repository<Course>,
   ) {}
 
-  async saveBatch(gradeItems: GradeUploadItemDto[]): Promise<Grade[]> {
+  /**
+   * Batch upsert student marks for a given stage and course.
+   * Operates on an open temporal model without stage locking barriers.
+   */
+  async uploadBatch(
+    gradeItems: GradeUploadItemDto[],
+    batchCourseId?: string,
+    batchStage?: EvaluationStage,
+  ): Promise<Grade[]> {
     if (!gradeItems || gradeItems.length === 0) {
       return [];
     }
 
-    const studentIds = Array.from(new Set(gradeItems.map((g) => g.studentId)));
-    const courseIds = Array.from(new Set(gradeItems.map((g) => g.courseId)));
+    // Resolve courseId and stage for each item
+    const resolvedItems = gradeItems.map((item) => {
+      const courseId = item.courseId || batchCourseId;
+      const stage = item.stage || batchStage || EvaluationStage.ETAPA_1;
+
+      if (!courseId) {
+        throw new BadRequestException(
+          `El ID del curso es obligatorio para la calificación del estudiante ${item.studentId}`,
+        );
+      }
+
+      return {
+        ...item,
+        courseId,
+        stage,
+      };
+    });
+
+    const studentIds = Array.from(new Set(resolvedItems.map((g) => g.studentId)));
+    const courseIds = Array.from(new Set(resolvedItems.map((g) => g.courseId)));
 
     const students = await this.studentRepository.findBy({ id: In(studentIds) });
     const courses = await this.courseRepository.findBy({ id: In(courseIds) });
@@ -31,9 +61,7 @@ export class GradesService {
     const studentMap = new Map(students.map((s) => [s.id, s]));
     const courseMap = new Map(courses.map((c) => [c.id, c]));
 
-    const savedGrades: Grade[] = [];
-
-    for (const item of gradeItems) {
+    for (const item of resolvedItems) {
       const student = studentMap.get(item.studentId);
       const course = courseMap.get(item.courseId);
 
@@ -42,20 +70,43 @@ export class GradesService {
           `Estudiante ${item.studentId} o Curso ${item.courseId} no encontrado`,
         );
       }
+    }
 
-      // Check if grade already exists for this stage, student and course
-      let grade = await this.gradeRepository.findOne({
+    const existingGrades =
+      (await this.gradeRepository.find({
         where: {
-          studentId: item.studentId,
-          courseId: item.courseId,
-          stage: item.stage,
+          studentId: In(studentIds),
+          courseId: In(courseIds),
         },
-      });
+      })) || [];
+
+    const existingMap = new Map<string, Grade>();
+    for (const g of existingGrades) {
+      existingMap.set(`${g.studentId}#${g.courseId}#${g.stage}`, g);
+    }
+
+    const entitiesToSave: Grade[] = [];
+
+    for (const item of resolvedItems) {
+      const student = studentMap.get(item.studentId)!;
+      const course = courseMap.get(item.courseId)!;
+
+      const key = `${item.studentId}#${item.courseId}#${item.stage}`;
+      let grade = existingMap.get(key);
+
+      // Calculate 3-dimension average (Técnica, Expresión, Disciplina) rounded to 2 decimals
+      const average = parseFloat(
+        (
+          (item.techniqueScore + item.expressionScore + item.disciplineScore) /
+          3
+        ).toFixed(2),
+      );
 
       if (grade) {
         grade.techniqueScore = item.techniqueScore;
         grade.expressionScore = item.expressionScore;
         grade.disciplineScore = item.disciplineScore;
+        grade.average = average;
       } else {
         grade = this.gradeRepository.create({
           student,
@@ -65,16 +116,26 @@ export class GradesService {
           techniqueScore: item.techniqueScore,
           expressionScore: item.expressionScore,
           disciplineScore: item.disciplineScore,
+          average,
           stage: item.stage,
         });
       }
 
-      // Save (TypeORM will trigger @BeforeInsert / @BeforeUpdate hook to calculate average)
-      const saved = await this.gradeRepository.save(grade);
-      savedGrades.push(saved);
+      entitiesToSave.push(grade);
     }
 
-    return savedGrades;
+    return this.gradeRepository.save(entitiesToSave);
+  }
+
+  /**
+   * Backward-compatible alias for uploadBatch.
+   */
+  async saveBatch(
+    gradeItems: GradeUploadItemDto[],
+    batchCourseId?: string,
+    batchStage?: EvaluationStage,
+  ): Promise<Grade[]> {
+    return this.uploadBatch(gradeItems, batchCourseId, batchStage);
   }
 
   async getHistoryByStudent(studentId: string): Promise<Grade[]> {
@@ -90,6 +151,32 @@ export class GradesService {
       relations: { course: true },
       order: { createdAt: 'ASC' },
     });
+  }
+
+  async findByCourseAndStage(
+    courseId: string,
+    stage?: string,
+  ): Promise<Grade[]> {
+    const where: any = { courseId };
+    if (stage) {
+      where.stage = stage;
+    }
+
+    return this.gradeRepository.find({
+      where,
+      relations: { student: true, course: true },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  /**
+   * Alias for findByCourseAndStage matching contracts.
+   */
+  async getGradesByCourse(
+    courseId: string,
+    stage?: string,
+  ): Promise<Grade[]> {
+    return this.findByCourseAndStage(courseId, stage);
   }
 
   async getAverageGradesByStyle(): Promise<any[]> {
@@ -108,3 +195,4 @@ export class GradesService {
     }));
   }
 }
+

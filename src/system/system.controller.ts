@@ -17,7 +17,7 @@ import { UserRole } from '../users/entities/user.entity';
 export class SystemController {
   constructor(private readonly systemService: SystemService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.DIRECTOR, UserRole.OPERADOR)
+  @Roles(UserRole.ADMIN, UserRole.OPERADOR)
   @Get('dashboard-stats')
   async getDashboardStats() {
     return this.systemService.getDashboardStats();

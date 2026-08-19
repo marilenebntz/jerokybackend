@@ -10,7 +10,7 @@ export class InitialSchema1700000000000 implements MigrationInterface {
     // Enum for User Roles
     await queryRunner.query(`
       DO $$ BEGIN
-        CREATE TYPE "public"."users_role_enum" AS ENUM('Administrator', 'Director', 'Docente', 'Operador', 'Alumno', 'Tutor');
+        CREATE TYPE "public"."users_role_enum" AS ENUM('Administrator', 'Docente', 'Operador', 'Alumno', 'Tutor');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
@@ -60,6 +60,7 @@ export class InitialSchema1700000000000 implements MigrationInterface {
         "encryptedMedicalInfo" text,
         "biometricTemplateId" character varying,
         "biometricConsent" boolean NOT NULL DEFAULT false,
+        "status" character varying NOT NULL DEFAULT 'active',
         "tutorId" uuid,
         "userId" uuid,
         "createdAt" TIMESTAMP NOT NULL DEFAULT now(),

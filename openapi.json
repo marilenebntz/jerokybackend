@@ -1,6 +1,27 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api": {
+      "get": {
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
     "/api/auth/login": {
       "post": {
         "operationId": "AuthController_login",
@@ -65,8 +86,98 @@
       "post": {
         "operationId": "UsersController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/{id}": {
+      "patch": {
+        "operationId": "UsersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/users/{id}/status": {
+      "patch": {
+        "operationId": "UsersController_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
             "description": "",
             "content": {
               "application/json": {
@@ -138,6 +249,95 @@
     "/api/students/{id}": {
       "get": {
         "operationId": "StudentsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Student"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      },
+      "patch": {
+        "operationId": "StudentsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Student"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      },
+      "delete": {
+        "operationId": "StudentsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/api/students/{id}/status": {
+      "patch": {
+        "operationId": "StudentsController_updateStatus",
         "parameters": [
           {
             "name": "id",
@@ -458,6 +658,30 @@
         ]
       }
     },
+    "/api/attendance/manual": {
+      "post": {
+        "operationId": "AttendanceController_checkInManual",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAttendanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
     "/api/attendance/reports": {
       "get": {
         "operationId": "AttendanceController_getReports",
@@ -472,6 +696,14 @@
           },
           {
             "name": "period",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
             "required": false,
             "in": "query",
             "schema": {
@@ -571,25 +803,301 @@
         ]
       }
     },
-    "/api/grades/batch": {
-      "post": {
-        "operationId": "GradesController_saveBatch",
-        "parameters": [],
+    "/api/academic-periods": {
+      "get": {
+        "operationId": "AcademicPeriodsController_findAll",
+        "parameters": [
+          {
+            "name": "year",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar etapas por año lectivo",
+            "schema": {
+              "minimum": 2000,
+              "maximum": 2100,
+              "example": 2026,
+              "type": "number"
+            }
+          },
+          {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por nombre de etapa evaluativa",
+            "schema": {
+              "example": "1ª Etapa",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Grade"
-                  }
-                }
+          "200": {
+            "description": "Array of academic periods"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List academic periods / stages",
+        "tags": [
+          "Academic Periods"
+        ]
+      },
+      "post": {
+        "operationId": "AcademicPeriodsController_createOrUpdate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAcademicPeriodDto"
               }
             }
           }
         },
+        "responses": {
+          "201": {
+            "description": "Academic period configured successfully"
+          },
+          "400": {
+            "description": "Validation error (e.g. invalid date order)"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create or update an academic stage definition",
+        "tags": [
+          "Academic Periods"
+        ]
+      }
+    },
+    "/api/academic-periods/years": {
+      "get": {
+        "operationId": "AcademicPeriodsController_getYears",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Array of years (numbers)"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all distinct academic years with records",
+        "tags": [
+          "Academic Periods"
+        ]
+      }
+    },
+    "/api/academic-periods/{id}": {
+      "get": {
+        "operationId": "AcademicPeriodsController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Academic period details"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Period not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get academic period by ID",
+        "tags": [
+          "Academic Periods"
+        ]
+      },
+      "put": {
+        "operationId": "AcademicPeriodsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAcademicPeriodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Academic period updated"
+          },
+          "400": {
+            "description": "Invalid date range"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions"
+          },
+          "404": {
+            "description": "Period not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update stage dates by ID",
+        "tags": [
+          "Academic Periods"
+        ]
+      },
+      "delete": {
+        "operationId": "AcademicPeriodsController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Period deleted successfully"
+          },
+          "400": {
+            "description": "Cannot delete period with associated grades"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions"
+          },
+          "404": {
+            "description": "Period not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete academic period by ID",
+        "tags": [
+          "Academic Periods"
+        ]
+      }
+    },
+    "/api/academic-periods/seed/{year}": {
+      "post": {
+        "operationId": "AcademicPeriodsController_seedDefaults",
+        "parameters": [
+          {
+            "name": "year",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "List of seeded academic periods"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Initialize default Paraguayan academic stages for a year",
+        "tags": [
+          "Academic Periods"
+        ]
+      }
+    },
+    "/api/grades/batch": {
+      "post": {
+        "operationId": "GradesController_saveBatch",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadGradesBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Grades registered or updated successfully"
+          },
+          "400": {
+            "description": "Validation error in marks or payload"
+          },
+          "404": {
+            "description": "Student or Course not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Batch register or update student evaluations by stage",
         "tags": [
           "Grades"
         ]
@@ -610,19 +1118,55 @@
         ],
         "responses": {
           "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Grade"
-                  }
-                }
-              }
-            }
+            "description": "Array of student grades"
+          },
+          "404": {
+            "description": "Student not found"
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get academic grade history for a student",
+        "tags": [
+          "Grades"
+        ]
+      }
+    },
+    "/api/grades/course/{courseId}": {
+      "get": {
+        "operationId": "GradesController_getGradesByCourse",
+        "parameters": [
+          {
+            "name": "courseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of grades for the course and stage"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get grades for a specific course and stage",
         "tags": [
           "Grades"
         ]
@@ -634,19 +1178,15 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
+            "description": "Average scores grouped by discipline"
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get statistical averages grouped by dance style",
         "tags": [
           "Grades"
         ]
@@ -874,7 +1414,6 @@
           "role": {
             "enum": [
               "Administrator",
-              "Director",
               "Docente",
               "Operador",
               "Alumno",
@@ -912,6 +1451,84 @@
           "lastName",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 50
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "Administrator",
+              "Docente",
+              "Operador",
+              "Alumno",
+              "Tutor"
+            ]
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          }
+        },
+        "required": [
+          "email",
+          "role"
+        ]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "Administrator",
+              "Docente",
+              "Operador",
+              "Alumno",
+              "Tutor"
+            ]
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          }
+        }
+      },
+      "UpdateUserStatusDto": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "isActive"
         ]
       },
       "CreateTutorDto": {
@@ -1022,6 +1639,9 @@
           "biometricConsent": {
             "type": "boolean"
           },
+          "status": {
+            "type": "string"
+          },
           "tutor": {
             "nullable": true,
             "type": "object",
@@ -1058,6 +1678,7 @@
           "encryptedMedicalInfo",
           "biometricTemplateId",
           "biometricConsent",
+          "status",
           "tutor",
           "user",
           "createdAt",
@@ -1111,6 +1732,46 @@
           "createdAt",
           "updatedAt"
         ]
+      },
+      "UpdateStudentDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$"
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$"
+          },
+          "ci": {
+            "type": "string",
+            "pattern": "^\\d{6,15}$"
+          },
+          "birthDate": {
+            "type": "string"
+          },
+          "encryptedMedicalInfo": {
+            "type": "string"
+          },
+          "biometricConsent": {
+            "type": "boolean"
+          },
+          "tutorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tutor": {
+            "$ref": "#/components/schemas/CreateTutorDto"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
       },
       "EnrollStudentDto": {
         "type": "object",
@@ -1353,35 +2014,123 @@
           }
         }
       },
-      "Grade": {
+      "ManualAttendanceDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "student": {
-            "$ref": "#/components/schemas/Student"
-          },
           "studentId": {
-            "type": "string"
-          },
-          "course": {
-            "$ref": "#/components/schemas/Course"
+            "type": "string",
+            "format": "uuid"
           },
           "courseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Entrada",
+              "Salida"
+            ]
+          },
+          "timestamp": {
             "type": "string"
+          }
+        },
+        "required": [
+          "studentId",
+          "courseId"
+        ]
+      },
+      "CreateAcademicPeriodDto": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "number",
+            "minimum": 2000,
+            "maximum": 2100,
+            "description": "Año lectivo del ciclo académico",
+            "example": 2026
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Nombre o denominación de la etapa evaluativa/período",
+            "example": "1ª Etapa"
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Fecha de inicio de la etapa (YYYY-MM-DD)",
+            "example": "2026-02-01"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Fecha de fin de la etapa (YYYY-MM-DD)",
+            "example": "2026-06-30"
+          }
+        },
+        "required": [
+          "year",
+          "name",
+          "startDate",
+          "endDate"
+        ]
+      },
+      "UpdateAcademicPeriodDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Nombre o denominación de la etapa evaluativa/período",
+            "example": "1ª Etapa"
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Fecha de inicio de la etapa (YYYY-MM-DD)",
+            "example": "2026-02-01"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Fecha de fin de la etapa (YYYY-MM-DD)",
+            "example": "2026-06-30"
+          }
+        }
+      },
+      "GradeUploadItemDto": {
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+            "description": "ID del alumno"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
+            "description": "ID del curso (opcional si se define a nivel de lote)"
           },
           "techniqueScore": {
-            "type": "number"
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 85,
+            "description": "Nota de Técnica (0-100)"
           },
           "expressionScore": {
-            "type": "number"
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 90,
+            "description": "Nota de Expresión (0-100)"
           },
           "disciplineScore": {
-            "type": "number"
-          },
-          "average": {
-            "type": "number"
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 95,
+            "description": "Nota de Disciplina (0-100)"
           },
           "stage": {
             "enum": [
@@ -1390,30 +2139,48 @@
               "Examen Final",
               "Recuperatorio"
             ],
-            "type": "string"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string"
+            "type": "string",
+            "example": "1ª Etapa",
+            "description": "Etapa evaluativa (opcional si se define a nivel de lote)"
           }
         },
         "required": [
-          "id",
-          "student",
           "studentId",
-          "course",
-          "courseId",
           "techniqueScore",
           "expressionScore",
-          "disciplineScore",
-          "average",
-          "stage",
-          "createdAt",
-          "updatedAt"
+          "disciplineScore"
+        ]
+      },
+      "UploadGradesBatchDto": {
+        "type": "object",
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
+            "description": "ID del curso aplicable al lote de calificaciones"
+          },
+          "stage": {
+            "enum": [
+              "1ª Etapa",
+              "2ª Etapa",
+              "Examen Final",
+              "Recuperatorio"
+            ],
+            "type": "string",
+            "example": "1ª Etapa",
+            "description": "Etapa evaluativa oficial aplicable al lote de calificaciones"
+          },
+          "grades": {
+            "description": "Lista de notas de estudiantes a registrar o actualizar",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GradeUploadItemDto"
+            }
+          }
+        },
+        "required": [
+          "grades"
         ]
       },
       "CreateCommunicationDto": {
@@ -1436,7 +2203,6 @@
               "type": "string",
               "enum": [
                 "Administrator",
-                "Director",
                 "Docente",
                 "Operador",
                 "Alumno",
@@ -1450,6 +2216,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "courseId": {
+            "type": "string"
           }
         },
         "required": [
@@ -1477,7 +2246,6 @@
               "type": "string",
               "enum": [
                 "Administrator",
-                "Director",
                 "Docente",
                 "Operador",
                 "Alumno",
@@ -1490,6 +2258,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "courseId": {
+            "type": "string",
+            "nullable": true
           },
           "sender": {
             "$ref": "#/components/schemas/User"
@@ -1514,6 +2286,7 @@
           "body",
           "targetRoles",
           "channels",
+          "courseId",
           "sender",
           "senderId",
           "logs",
@@ -1533,9 +2306,25 @@
             "type": "string"
           },
           "recipient": {
-            "$ref": "#/components/schemas/User"
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ]
           },
           "recipientId": {
+            "type": "string",
+            "nullable": true
+          },
+          "recipientEmail": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "recipientRole": {
             "type": "string"
           },
           "channel": {
@@ -1555,6 +2344,9 @@
           "communicationId",
           "recipient",
           "recipientId",
+          "recipientEmail",
+          "recipientName",
+          "recipientRole",
           "channel",
           "status",
           "sentAt"

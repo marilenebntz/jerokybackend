@@ -10,7 +10,7 @@ import { UserRole } from '../users/entities/user.entity';
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.DIRECTOR)
+  @Roles(UserRole.ADMIN)
   @Get()
   async findAll() {
     return this.auditService.findAll();

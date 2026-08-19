@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Index } from 'typeorm';
 import { Student } from '../../students/entities/student.entity';
 import { Course } from '../../courses/entities/course.entity';
 
@@ -8,6 +8,8 @@ export enum AttendanceType {
 }
 
 @Entity('attendances')
+@Index(['studentId', 'courseId', 'timestamp'])
+@Index(['courseId', 'timestamp'])
 export class Attendance {
   @PrimaryGeneratedColumn('uuid')
   id: string;

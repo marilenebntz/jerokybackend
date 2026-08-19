@@ -20,7 +20,7 @@ export enum EvaluationStage {
 }
 
 @Entity('grades')
-@Unique(['studentId', 'courseId', 'stage'])
+@Unique('UQ_grades_student_course_stage', ['studentId', 'courseId', 'stage'])
 export class Grade {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -2,12 +2,11 @@
 -- This file contains initial and mock data for the PostgreSQL database.
 
 -- 1. CLEAN UP EXISTING MOCK DATA (Optional, order matters due to foreign key constraints)
-TRUNCATE TABLE enrollments, students, tutors, course_schedules, courses, users CASCADE;
+TRUNCATE TABLE academic_periods, enrollments, students, tutors, course_schedules, courses, users CASCADE;
 
 -- 2. INSERT DEFAULT USERS
 -- Password hashes generated using bcrypt (10 rounds):
 -- admin123: $2b$10$HnE3mMQvzRgEkn5Ths4CvOaSE2GqXLcFWsfTmFjUE/9RdqSk8.csK
--- director123: $2b$10$jZZO48d4IZ8wM9r8Dp3c7OVjdCG0bK9avqVkncqq0.sXxa3nCl0X2
 -- docente123: $2b$10$U6MYlRY9RkwzZWRiqsm6oextgU6kFn4eEGgqOvN22JlvN2f7uHE12
 -- operador123: $2b$10$YSapGB3/ZCSdI416BmdU0.9Kh78jVHrfe1EaO1tGIBQR6ynkxXJZ6
 
@@ -29,17 +28,6 @@ INSERT INTO "users" (
     'Administrator', 
     true, 
     'Admin', 
-    'Jeroky', 
-    NOW(), 
-    NOW()
-  ),
-  (
-    'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 
-    'director@jeroky.com', 
-    '$2b$10$jZZO48d4IZ8wM9r8Dp3c7OVjdCG0bK9avqVkncqq0.sXxa3nCl0X2', 
-    'Director', 
-    true, 
-    'Director', 
     'Jeroky', 
     NOW(), 
     NOW()
@@ -269,3 +257,53 @@ INSERT INTO "enrollments" (
     NOW()
   )
 ON CONFLICT ("studentId", "courseId") DO NOTHING;
+
+
+-- 7. INSERT DEFAULT ACADEMIC PERIODS (2026)
+INSERT INTO "academic_periods" (
+  "id",
+  "year",
+  "name",
+  "startDate",
+  "endDate",
+  "createdAt",
+  "updatedAt"
+) VALUES
+  (
+    'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a31',
+    2026,
+    '1ª Etapa',
+    '2026-02-01',
+    '2026-06-30',
+    NOW(),
+    NOW()
+  ),
+  (
+    'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a32',
+    2026,
+    '2ª Etapa',
+    '2026-07-01',
+    '2026-10-31',
+    NOW(),
+    NOW()
+  ),
+  (
+    'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33',
+    2026,
+    'Examen Final',
+    '2026-11-01',
+    '2026-11-30',
+    NOW(),
+    NOW()
+  ),
+  (
+    'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a34',
+    2026,
+    'Recuperatorio',
+    '2026-12-01',
+    '2026-12-15',
+    NOW(),
+    NOW()
+  )
+ON CONFLICT ("year", "name") DO NOTHING;
+

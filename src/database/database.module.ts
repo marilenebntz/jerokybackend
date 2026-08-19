@@ -13,6 +13,7 @@ import { Grade } from '../grades/entities/grade.entity';
 import { Communication } from '../communications/entities/communication.entity';
 import { CommunicationLog } from '../communications/entities/communication-log.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
+import { AcademicPeriod } from '../academic-periods/entities/academic-period.entity';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { AuditLog } from '../audit/entities/audit-log.entity';
             Communication,
             CommunicationLog,
             AuditLog,
+            AcademicPeriod,
           ],
           migrations: [path.join(__dirname, 'migrations', '*{.ts,.js}')],
           migrationsRun,

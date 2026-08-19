@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -11,6 +13,7 @@ import { CommunicationsModule } from './communications/communications.module';
 import { AuditModule } from './audit/audit.module';
 import { SystemModule } from './system/system.module';
 import { FacesModule } from './faces/faces.module';
+import { AcademicPeriodsModule } from './academic-periods/academic-periods.module';
 
 @Module({
   imports: [
@@ -28,6 +31,10 @@ import { FacesModule } from './faces/faces.module';
     AuditModule,
     SystemModule,
     FacesModule,
+    AcademicPeriodsModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
+

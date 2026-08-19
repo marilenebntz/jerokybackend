@@ -2,6 +2,8 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import {
   AttendanceService,
   normalizeDay,
+  normalizeStageName,
+  resolveDefaultStageDates,
   parseTimeToMinutes,
   dateToMinutes,
   getZonedDayName,
@@ -13,6 +15,7 @@ import {
 } from './attendance.service';
 import { AttendanceType } from './entities/attendance.entity';
 import { Course } from '../courses/entities/course.entity';
+import { EvaluationStage } from '../academic-periods/entities/academic-period.entity';
 
 describe('AttendanceService - Unit Tests', () => {
   let service: AttendanceService;
@@ -21,6 +24,7 @@ describe('AttendanceService - Unit Tests', () => {
   let enrollmentRepo: any;
   let courseRepo: any;
   let facesService: any;
+  let academicPeriodsService: any;
 
   beforeEach(() => {
     attendanceRepo = {
@@ -54,12 +58,17 @@ describe('AttendanceService - Unit Tests', () => {
       identifyFace: jest.fn(),
     };
 
+    academicPeriodsService = {
+      findByYearAndStage: jest.fn(),
+    };
+
     service = new AttendanceService(
       attendanceRepo,
       studentRepo,
       enrollmentRepo,
       courseRepo,
       facesService,
+      academicPeriodsService,
     );
   });
 
@@ -71,6 +80,51 @@ describe('AttendanceService - Unit Tests', () => {
       expect(normalizeDay('Sábado')).toBe('sabado');
       expect(normalizeDay('  Jueves  ')).toBe('jueves');
       expect(normalizeDay('')).toBe('');
+    });
+
+    it('normalizeStageName should accurately identify canonical stages and legacy labels', () => {
+      expect(normalizeStageName('1ª Etapa')).toBe(EvaluationStage.ETAPA_1);
+      expect(normalizeStageName('1a Etapa')).toBe(EvaluationStage.ETAPA_1);
+      expect(normalizeStageName('1 Etapa')).toBe(EvaluationStage.ETAPA_1);
+      expect(normalizeStageName('2026-I')).toBe(EvaluationStage.ETAPA_1);
+      expect(normalizeStageName('Periodo 2026 - 1ª Etapa')).toBe(EvaluationStage.ETAPA_1);
+      expect(normalizeStageName('Primera Etapa')).toBe(EvaluationStage.ETAPA_1);
+
+      expect(normalizeStageName('2ª Etapa')).toBe(EvaluationStage.ETAPA_2);
+      expect(normalizeStageName('2a Etapa')).toBe(EvaluationStage.ETAPA_2);
+      expect(normalizeStageName('2 Etapa')).toBe(EvaluationStage.ETAPA_2);
+      expect(normalizeStageName('2026-II')).toBe(EvaluationStage.ETAPA_2);
+      expect(normalizeStageName('Periodo 2026 - 2ª Etapa')).toBe(EvaluationStage.ETAPA_2);
+      expect(normalizeStageName('Segunda Etapa')).toBe(EvaluationStage.ETAPA_2);
+
+      expect(normalizeStageName('Examen Final')).toBe(EvaluationStage.EXAMEN_FINAL);
+      expect(normalizeStageName('final')).toBe(EvaluationStage.EXAMEN_FINAL);
+
+      expect(normalizeStageName('Recuperatorio')).toBe(EvaluationStage.RECUPERATORIO);
+      expect(normalizeStageName('recup')).toBe(EvaluationStage.RECUPERATORIO);
+
+      expect(normalizeStageName('Ciclo Completo')).toBeNull();
+      expect(normalizeStageName('2026')).toBeNull();
+      expect(normalizeStageName('')).toBeNull();
+      expect(normalizeStageName(undefined)).toBeNull();
+    });
+
+    it('resolveDefaultStageDates should return standard Paraguayan calendar dates', () => {
+      const stage1 = resolveDefaultStageDates(EvaluationStage.ETAPA_1, 2026);
+      expect(stage1.startDate).toEqual(new Date(2026, 1, 1, 0, 0, 0, 0)); // Feb 1
+      expect(stage1.endDate).toEqual(new Date(2026, 5, 30, 23, 59, 59, 999)); // Jun 30
+
+      const stage2 = resolveDefaultStageDates(EvaluationStage.ETAPA_2, 2026);
+      expect(stage2.startDate).toEqual(new Date(2026, 6, 1, 0, 0, 0, 0)); // Jul 1
+      expect(stage2.endDate).toEqual(new Date(2026, 9, 31, 23, 59, 59, 999)); // Oct 31
+
+      const stageFinal = resolveDefaultStageDates(EvaluationStage.EXAMEN_FINAL, 2026);
+      expect(stageFinal.startDate).toEqual(new Date(2026, 10, 1, 0, 0, 0, 0)); // Nov 1
+      expect(stageFinal.endDate).toEqual(new Date(2026, 10, 30, 23, 59, 59, 999)); // Nov 30
+
+      const stageRecup = resolveDefaultStageDates(EvaluationStage.RECUPERATORIO, 2026);
+      expect(stageRecup.startDate).toEqual(new Date(2026, 11, 1, 0, 0, 0, 0)); // Dec 1
+      expect(stageRecup.endDate).toEqual(new Date(2026, 11, 15, 23, 59, 59, 999)); // Dec 15
     });
 
     it('parseTimeToMinutes should convert HH:mm to minutes', () => {
@@ -116,19 +170,30 @@ describe('AttendanceService - Unit Tests', () => {
       expect(getZonedDateKey(dateUtc, 'UTC')).toBe('2026-08-18');
     });
 
-    it('resolvePeriodDateRange should parse 1st and 2nd stages correctly', () => {
-      const range1 = resolvePeriodDateRange('2026-I');
-      expect(range1?.startDate.getFullYear()).toBe(2026);
-      expect(range1?.startDate.getMonth()).toBe(0); // Jan
-      expect(range1?.endDate.getMonth()).toBe(5); // Jun
+    it('resolvePeriodDateRange should parse stages, full cycle, and year strings correctly', () => {
+      const range1 = resolvePeriodDateRange('1ª Etapa', 2026);
+      expect(range1?.startDate).toEqual(new Date(2026, 1, 1, 0, 0, 0, 0)); // Feb 1
+      expect(range1?.endDate).toEqual(new Date(2026, 5, 30, 23, 59, 59, 999)); // Jun 30
 
-      const range2 = resolvePeriodDateRange('2026-II');
-      expect(range2?.startDate.getMonth()).toBe(6); // Jul
-      expect(range2?.endDate.getMonth()).toBe(11); // Dec
+      const range2 = resolvePeriodDateRange('2ª Etapa', 2026);
+      expect(range2?.startDate).toEqual(new Date(2026, 6, 1, 0, 0, 0, 0)); // Jul 1
+      expect(range2?.endDate).toEqual(new Date(2026, 9, 31, 23, 59, 59, 999)); // Oct 31
+
+      const rangeExam = resolvePeriodDateRange('Examen Final', 2026);
+      expect(rangeExam?.startDate).toEqual(new Date(2026, 10, 1, 0, 0, 0, 0)); // Nov 1
+      expect(rangeExam?.endDate).toEqual(new Date(2026, 10, 30, 23, 59, 59, 999)); // Nov 30
+
+      const rangeRecup = resolvePeriodDateRange('Recuperatorio', 2026);
+      expect(rangeRecup?.startDate).toEqual(new Date(2026, 11, 1, 0, 0, 0, 0)); // Dec 1
+      expect(rangeRecup?.endDate).toEqual(new Date(2026, 11, 15, 23, 59, 59, 999)); // Dec 15
+
+      const rangeFull = resolvePeriodDateRange('Ciclo Completo', 2026);
+      expect(rangeFull?.startDate).toEqual(new Date(2026, 0, 1, 0, 0, 0, 0));
+      expect(rangeFull?.endDate).toEqual(new Date(2026, 11, 31, 23, 59, 59, 999));
 
       const rangeYear = resolvePeriodDateRange('2026');
-      expect(rangeYear?.startDate.getMonth()).toBe(0);
-      expect(rangeYear?.endDate.getMonth()).toBe(11);
+      expect(rangeYear?.startDate).toEqual(new Date(2026, 0, 1, 0, 0, 0, 0));
+      expect(rangeYear?.endDate).toEqual(new Date(2026, 11, 31, 23, 59, 59, 999));
 
       expect(resolvePeriodDateRange(undefined)).toBeNull();
     });
@@ -738,6 +803,169 @@ describe('AttendanceService - Unit Tests', () => {
       await expect(service.getReports('non-existent-course')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('should filter attendances by database-configured stage dates when available', async () => {
+      courseRepo.findOne.mockResolvedValue(mockCourse);
+      enrollmentRepo.find.mockResolvedValue([
+        { studentId: studentSofia.id, student: studentSofia, status: 'active' },
+      ]);
+
+      academicPeriodsService.findByYearAndStage.mockResolvedValue({
+        id: 'p-1',
+        year: 2026,
+        name: EvaluationStage.ETAPA_1,
+        startDate: '2026-02-15',
+        endDate: '2026-06-20',
+      });
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      attendanceRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.getReports('course-1', '1ª Etapa');
+
+      expect(academicPeriodsService.findByYearAndStage).toHaveBeenCalledWith(
+        2026,
+        EvaluationStage.ETAPA_1,
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'attendance.timestamp >= :startDate',
+        { startDate: new Date(2026, 1, 15, 0, 0, 0, 0) },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'attendance.timestamp <= :endDate',
+        { endDate: new Date(2026, 5, 20, 23, 59, 59, 999) },
+      );
+    });
+
+    it('should filter attendances with default Paraguay calendar dates when stage not configured in DB', async () => {
+      courseRepo.findOne.mockResolvedValue(mockCourse);
+      enrollmentRepo.find.mockResolvedValue([
+        { studentId: studentSofia.id, student: studentSofia, status: 'active' },
+      ]);
+
+      academicPeriodsService.findByYearAndStage.mockResolvedValue(null);
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      attendanceRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.getReports('course-1', '2ª Etapa');
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'attendance.timestamp >= :startDate',
+        { startDate: new Date(2026, 6, 1, 0, 0, 0, 0) },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'attendance.timestamp <= :endDate',
+        { endDate: new Date(2026, 9, 31, 23, 59, 59, 999) },
+      );
+    });
+    it('should support explicit year parameter in getReports', async () => {
+      courseRepo.findOne.mockResolvedValue(mockCourse);
+      enrollmentRepo.find.mockResolvedValue([
+        { studentId: studentSofia.id, student: studentSofia, status: 'active' },
+      ]);
+
+      academicPeriodsService.findByYearAndStage.mockResolvedValue({
+        id: 'p-2025',
+        year: 2025,
+        name: EvaluationStage.ETAPA_1,
+        startDate: '2025-02-15',
+        endDate: '2025-06-30',
+      });
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      attendanceRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const reports = await service.getReports('course-1', '1ª Etapa', 2025);
+
+      expect(academicPeriodsService.findByYearAndStage).toHaveBeenCalledWith(
+        2025,
+        EvaluationStage.ETAPA_1,
+      );
+      expect(reports).toHaveLength(1);
+      expect(reports[0].presentCount).toBe(0);
+      expect(reports[0].absentCount).toBe(0);
+      expect(reports[0].status).toBe('REGULAR');
+    });
+  });
+
+  describe('resolvePeriodDateRange and resolvePeriodDateRangeAsync', () => {
+    it('should return custom date range from database when record exists for (year, stage)', async () => {
+      academicPeriodsService.findByYearAndStage.mockResolvedValue({
+        id: 'p-custom',
+        year: 2026,
+        name: EvaluationStage.ETAPA_1,
+        startDate: '2026-02-10',
+        endDate: '2026-06-25',
+      });
+
+      const range1 = await service.resolvePeriodDateRange(2026, '1ª Etapa');
+      expect(range1).toBeDefined();
+      expect(range1?.startDate).toEqual(new Date(2026, 1, 10, 0, 0, 0, 0));
+      expect(range1?.endDate).toEqual(new Date(2026, 5, 25, 23, 59, 59, 999));
+
+      const range2 = await service.resolvePeriodDateRange('1ª Etapa', 2026);
+      expect(range2).toEqual(range1);
+
+      const rangeAsync = await service.resolvePeriodDateRangeAsync('1ª Etapa', 2026);
+      expect(rangeAsync).toEqual(range1);
+    });
+
+    it('should fallback to default Paraguayan dates when no DB record exists for all canonical stages', async () => {
+      academicPeriodsService.findByYearAndStage.mockResolvedValue(null);
+
+      const range1 = await service.resolvePeriodDateRange(2026, '1ª Etapa');
+      expect(range1?.startDate).toEqual(new Date(2026, 1, 1, 0, 0, 0, 0));
+      expect(range1?.endDate).toEqual(new Date(2026, 5, 30, 23, 59, 59, 999));
+
+      const range2 = await service.resolvePeriodDateRange(2026, '2ª Etapa');
+      expect(range2?.startDate).toEqual(new Date(2026, 6, 1, 0, 0, 0, 0));
+      expect(range2?.endDate).toEqual(new Date(2026, 9, 31, 23, 59, 59, 999));
+
+      const rangeExam = await service.resolvePeriodDateRange(2026, 'Examen Final');
+      expect(rangeExam?.startDate).toEqual(new Date(2026, 10, 1, 0, 0, 0, 0));
+      expect(rangeExam?.endDate).toEqual(new Date(2026, 10, 30, 23, 59, 59, 999));
+
+      const rangeRecup = await service.resolvePeriodDateRange(2026, 'Recuperatorio');
+      expect(rangeRecup?.startDate).toEqual(new Date(2026, 11, 1, 0, 0, 0, 0));
+      expect(rangeRecup?.endDate).toEqual(new Date(2026, 11, 15, 23, 59, 59, 999));
+    });
+
+    it('should fallback to default Paraguayan dates when service throws an error', async () => {
+      academicPeriodsService.findByYearAndStage.mockRejectedValue(new Error('Connection lost'));
+
+      const range = await service.resolvePeriodDateRange(2026, '1ª Etapa');
+      expect(range?.startDate).toEqual(new Date(2026, 1, 1, 0, 0, 0, 0));
+      expect(range?.endDate).toEqual(new Date(2026, 5, 30, 23, 59, 59, 999));
+    });
+
+    it('should return full year range for Ciclo Completo or standalone year', async () => {
+      const rangeFull = await service.resolvePeriodDateRange(2026, 'Ciclo Completo');
+      expect(rangeFull?.startDate).toEqual(new Date(2026, 0, 1, 0, 0, 0, 0));
+      expect(rangeFull?.endDate).toEqual(new Date(2026, 11, 31, 23, 59, 59, 999));
+
+      const rangeYear = await service.resolvePeriodDateRange('2026', 2026);
+      expect(rangeYear?.startDate).toEqual(new Date(2026, 0, 1, 0, 0, 0, 0));
+      expect(rangeYear?.endDate).toEqual(new Date(2026, 11, 31, 23, 59, 59, 999));
+    });
+
+    it('should return null when period is undefined or empty', async () => {
+      expect(await service.resolvePeriodDateRange(2026, undefined)).toBeNull();
+      expect(await service.resolvePeriodDateRange(2026, '')).toBeNull();
+      expect(await service.resolvePeriodDateRange(undefined)).toBeNull();
     });
   });
 });

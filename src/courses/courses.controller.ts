@@ -33,7 +33,6 @@ export class CoursesController {
   @Roles(
     UserRole.ADMIN,
     UserRole.OPERADOR,
-    UserRole.DIRECTOR,
     UserRole.DOCENTE,
     UserRole.ALUMNO,
   )
@@ -46,7 +45,6 @@ export class CoursesController {
   @Roles(
     UserRole.ADMIN,
     UserRole.OPERADOR,
-    UserRole.DIRECTOR,
     UserRole.DOCENTE,
     UserRole.ALUMNO,
   )

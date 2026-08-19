@@ -42,6 +42,9 @@ export class Student {
   @Column({ default: false })
   biometricConsent: boolean;
 
+  @Column({ default: 'active' }) // 'active', 'inactive'
+  status: string;
+
   @ManyToOne(() => Tutor, (tutor) => tutor.students, {
     nullable: true,
     onDelete: 'SET NULL',
