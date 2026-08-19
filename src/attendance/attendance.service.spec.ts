@@ -7,6 +7,9 @@ import {
   getZonedDayName,
   getZonedMinutes,
   getZonedStartOfDay,
+  getZonedDateKey,
+  resolvePeriodDateRange,
+  calculateRegularity,
 } from './attendance.service';
 import { AttendanceType } from './entities/attendance.entity';
 import { Course } from '../courses/entities/course.entity';
@@ -16,6 +19,7 @@ describe('AttendanceService - Unit Tests', () => {
   let attendanceRepo: any;
   let studentRepo: any;
   let enrollmentRepo: any;
+  let courseRepo: any;
   let facesService: any;
 
   beforeEach(() => {
@@ -41,6 +45,11 @@ describe('AttendanceService - Unit Tests', () => {
       findOne: jest.fn(),
     };
 
+    courseRepo = {
+      findOne: jest.fn(),
+      find: jest.fn(),
+    };
+
     facesService = {
       identifyFace: jest.fn(),
     };
@@ -49,6 +58,7 @@ describe('AttendanceService - Unit Tests', () => {
       attendanceRepo,
       studentRepo,
       enrollmentRepo,
+      courseRepo,
       facesService,
     );
   });
@@ -99,6 +109,39 @@ describe('AttendanceService - Unit Tests', () => {
       expect(startOfDay.getHours()).toBe(0);
       expect(startOfDay.getMinutes()).toBe(0);
       expect(startOfDay.getSeconds()).toBe(0);
+    });
+
+    it('getZonedDateKey should return YYYY-MM-DD string in target timezone', () => {
+      const dateUtc = new Date('2026-08-18T16:30:00Z');
+      expect(getZonedDateKey(dateUtc, 'UTC')).toBe('2026-08-18');
+    });
+
+    it('resolvePeriodDateRange should parse 1st and 2nd stages correctly', () => {
+      const range1 = resolvePeriodDateRange('2026-I');
+      expect(range1?.startDate.getFullYear()).toBe(2026);
+      expect(range1?.startDate.getMonth()).toBe(0); // Jan
+      expect(range1?.endDate.getMonth()).toBe(5); // Jun
+
+      const range2 = resolvePeriodDateRange('2026-II');
+      expect(range2?.startDate.getMonth()).toBe(6); // Jul
+      expect(range2?.endDate.getMonth()).toBe(11); // Dec
+
+      const rangeYear = resolvePeriodDateRange('2026');
+      expect(rangeYear?.startDate.getMonth()).toBe(0);
+      expect(rangeYear?.endDate.getMonth()).toBe(11);
+
+      expect(resolvePeriodDateRange(undefined)).toBeNull();
+    });
+
+    it('calculateRegularity should return REGULAR for 0 classes held without penalizing', () => {
+      expect(calculateRegularity(100, 0)).toBe('REGULAR');
+      expect(calculateRegularity(0, 0)).toBe('REGULAR');
+      expect(calculateRegularity(100, 5)).toBe('REGULAR');
+      expect(calculateRegularity(75, 20)).toBe('REGULAR');
+      expect(calculateRegularity(74, 20)).toBe('EN ALERTA');
+      expect(calculateRegularity(70, 20)).toBe('EN ALERTA');
+      expect(calculateRegularity(69, 20)).toBe('IRREGULAR');
+      expect(calculateRegularity(0, 20)).toBe('IRREGULAR');
     });
   });
 
@@ -443,6 +486,258 @@ describe('AttendanceService - Unit Tests', () => {
       expect(result.success).toBe(true);
       expect(result.type).toBe(AttendanceType.SALIDA);
       expect(attendanceRepo.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('getReports', () => {
+    const studentSofia = {
+      id: 'student-1',
+      firstName: 'Sofía',
+      lastName: 'Pérez',
+    };
+    const studentMateo = {
+      id: 'student-2',
+      firstName: 'Mateo',
+      lastName: 'Gómez',
+    };
+
+    const mockCourse = {
+      id: 'course-1',
+      name: 'Ballet Clásico',
+      level: 'Nivel Inicial',
+      year: 2026,
+    };
+
+    it('should return 100% and REGULAR without penalizing students when 0 classes have been held at start of period', async () => {
+      courseRepo.findOne.mockResolvedValue(mockCourse);
+      enrollmentRepo.find.mockResolvedValue([
+        { studentId: studentSofia.id, student: studentSofia, status: 'active' },
+        { studentId: studentMateo.id, student: studentMateo, status: 'active' },
+      ]);
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]), // No attendances recorded yet
+      };
+      attendanceRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const reports = await service.getReports('course-1', '2026-I');
+
+      expect(reports).toHaveLength(2);
+      expect(reports[0].studentName).toBe('Mateo Gómez');
+      expect(reports[0].percentage).toBe(100);
+      expect(reports[0].classesHeld).toBe(0);
+      expect(reports[0].regularity).toBe('REGULAR');
+
+      expect(reports[1].studentName).toBe('Sofía Pérez');
+      expect(reports[1].percentage).toBe(100);
+      expect(reports[1].classesHeld).toBe(0);
+      expect(reports[1].regularity).toBe('REGULAR');
+    });
+
+    it('should calculate 100% (REGULAR) for student who attended the only class held in week 1, and 0% (IRREGULAR) for absent student', async () => {
+      courseRepo.findOne.mockResolvedValue(mockCourse);
+      enrollmentRepo.find.mockResolvedValue([
+        { studentId: studentSofia.id, student: studentSofia, status: 'active' },
+        { studentId: studentMateo.id, student: studentMateo, status: 'active' },
+      ]);
+
+      const classDate1 = new Date(2026, 2, 2, 16, 0); // 2026-03-02
+      const mockAttendances = [
+        {
+          id: 'att-1',
+          studentId: studentSofia.id,
+          student: studentSofia,
+          courseId: 'course-1',
+          type: AttendanceType.ENTRADA,
+          timestamp: classDate1,
+        },
+        {
+          id: 'att-2',
+          studentId: studentSofia.id,
+          student: studentSofia,
+          courseId: 'course-1',
+          type: AttendanceType.SALIDA,
+          timestamp: new Date(2026, 2, 2, 17, 30),
+        },
+      ];
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockAttendances),
+      };
+      attendanceRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const reports = await service.getReports('course-1', '2026-I');
+
+      expect(reports).toHaveLength(2);
+      const sofiaReport = reports.find((r) => r.studentId === studentSofia.id);
+      const mateoReport = reports.find((r) => r.studentId === studentMateo.id);
+
+      expect(sofiaReport).toBeDefined();
+      expect(sofiaReport?.classesHeld).toBe(1);
+      expect(sofiaReport?.entradas).toBe(1);
+      expect(sofiaReport?.percentage).toBe(100); // 1 / 1 * 100 = 100% (eliminates the old 5% bias!)
+      expect(sofiaReport?.regularity).toBe('REGULAR');
+
+      expect(mateoReport).toBeDefined();
+      expect(mateoReport?.classesHeld).toBe(1);
+      expect(mateoReport?.entradas).toBe(0);
+      expect(mateoReport?.percentage).toBe(0); // 0 / 1 = 0%
+      expect(mateoReport?.regularity).toBe('IRREGULAR');
+    });
+
+    it('should classify regularity thresholds (75% Regular, 70% En Alerta, 50% Irregular) over 20 classes held', async () => {
+      const studentValentina = {
+        id: 'student-3',
+        firstName: 'Valentina',
+        lastName: 'Giménez',
+      };
+      const studentCamila = {
+        id: 'student-4',
+        firstName: 'Camila',
+        lastName: 'Díaz',
+      };
+
+      courseRepo.findOne.mockResolvedValue(mockCourse);
+      enrollmentRepo.find.mockResolvedValue([
+        { studentId: studentSofia.id, student: studentSofia, status: 'active' },
+        { studentId: studentMateo.id, student: studentMateo, status: 'active' },
+        { studentId: studentValentina.id, student: studentValentina, status: 'active' },
+        { studentId: studentCamila.id, student: studentCamila, status: 'active' },
+      ]);
+
+      // 20 distinct dates
+      const attendances: any[] = [];
+      for (let day = 1; day <= 20; day++) {
+        const date = new Date(2026, 2, day, 16, 0);
+        // Camila attends all 20 days (100%)
+        attendances.push({
+          id: `att-c-${day}`,
+          studentId: studentCamila.id,
+          student: studentCamila,
+          courseId: 'course-1',
+          type: AttendanceType.ENTRADA,
+          timestamp: date,
+        });
+        // Sofia attends 15 days (75%)
+        if (day <= 15) {
+          attendances.push({
+            id: `att-s-${day}`,
+            studentId: studentSofia.id,
+            student: studentSofia,
+            courseId: 'course-1',
+            type: AttendanceType.ENTRADA,
+            timestamp: date,
+          });
+        }
+        // Mateo attends 14 days (70%)
+        if (day <= 14) {
+          attendances.push({
+            id: `att-m-${day}`,
+            studentId: studentMateo.id,
+            student: studentMateo,
+            courseId: 'course-1',
+            type: AttendanceType.ENTRADA,
+            timestamp: date,
+          });
+        }
+        // Valentina attends 10 days (50%)
+        if (day <= 10) {
+          attendances.push({
+            id: `att-v-${day}`,
+            studentId: studentValentina.id,
+            student: studentValentina,
+            courseId: 'course-1',
+            type: AttendanceType.ENTRADA,
+            timestamp: date,
+          });
+        }
+      }
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(attendances),
+      };
+      attendanceRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const reports = await service.getReports('course-1', '2026-I');
+
+      const sofia = reports.find((r) => r.studentId === studentSofia.id);
+      const mateo = reports.find((r) => r.studentId === studentMateo.id);
+      const valentina = reports.find((r) => r.studentId === studentValentina.id);
+
+      expect(sofia?.classesHeld).toBe(20);
+      expect(sofia?.percentage).toBe(75);
+      expect(sofia?.regularity).toBe('REGULAR');
+
+      expect(mateo?.classesHeld).toBe(20);
+      expect(mateo?.percentage).toBe(70);
+      expect(mateo?.regularity).toBe('EN ALERTA');
+
+      expect(valentina?.classesHeld).toBe(20);
+      expect(valentina?.percentage).toBe(50);
+      expect(valentina?.regularity).toBe('IRREGULAR');
+    });
+
+    it('should count multiple check-ins on the same day as 1 class session attended for percentage', async () => {
+      courseRepo.findOne.mockResolvedValue(mockCourse);
+      enrollmentRepo.find.mockResolvedValue([
+        { studentId: studentSofia.id, student: studentSofia, status: 'active' },
+      ]);
+
+      const sameDayTime1 = new Date(2026, 2, 2, 16, 0);
+      const sameDayTime2 = new Date(2026, 2, 2, 16, 5);
+
+      const mockAttendances = [
+        {
+          id: 'att-1',
+          studentId: studentSofia.id,
+          student: studentSofia,
+          courseId: 'course-1',
+          type: AttendanceType.ENTRADA,
+          timestamp: sameDayTime1,
+        },
+        {
+          id: 'att-2',
+          studentId: studentSofia.id,
+          student: studentSofia,
+          courseId: 'course-1',
+          type: AttendanceType.ENTRADA,
+          timestamp: sameDayTime2,
+        },
+      ];
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockAttendances),
+      };
+      attendanceRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const reports = await service.getReports('course-1');
+
+      expect(reports).toHaveLength(1);
+      expect(reports[0].classesHeld).toBe(1);
+      expect(reports[0].entradas).toBe(2); // Raw checkins preserved
+      expect(reports[0].percentage).toBe(100); // 1 distinct day / 1 class held = 100%
+      expect(reports[0].regularity).toBe('REGULAR');
+    });
+
+    it('should throw BadRequestException when courseId is not provided', async () => {
+      await expect(service.getReports()).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw NotFoundException when courseId does not exist', async () => {
+      courseRepo.findOne.mockResolvedValue(null);
+      await expect(service.getReports('non-existent-course')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });
