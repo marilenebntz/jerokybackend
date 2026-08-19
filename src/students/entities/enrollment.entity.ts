@@ -11,7 +11,7 @@ import { Student } from './student.entity';
 import { Course } from '../../courses/entities/course.entity';
 
 @Entity('enrollments')
-@Unique(['studentId', 'courseId', 'academicPeriod'])
+@Unique(['studentId', 'courseId'])
 export class Enrollment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -28,11 +28,8 @@ export class Enrollment {
   @Column()
   courseId: string;
 
-  @Column()
-  academicPeriod: string; // e.g. "2026-I"
-
   @Column({ default: 'active' })
-  status: string; // active, inactive, dropped
+  status: string; // active, inactive, transferred
 
   @CreateDateColumn()
   createdAt: Date;

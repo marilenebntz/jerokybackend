@@ -71,12 +71,10 @@ export class StudentsController {
   async transfer(
     @Body('enrollmentId') enrollmentId: string,
     @Body('targetCourseId') targetCourseId: string,
-    @Body('academicPeriod') academicPeriod: string,
   ) {
     return this.studentsService.transfer(
       enrollmentId,
       targetCourseId,
-      academicPeriod,
     );
   }
 
