@@ -206,8 +206,6 @@ export class AcademicPeriodsService {
     const stages: EvaluationStage[] = [
       EvaluationStage.ETAPA_1,
       EvaluationStage.ETAPA_2,
-      EvaluationStage.EXAMEN_FINAL,
-      EvaluationStage.RECUPERATORIO,
     ];
 
     for (const stage of stages) {
