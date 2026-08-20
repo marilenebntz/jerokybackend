@@ -2468,7 +2468,8 @@
             "type": "string"
           },
           "testEmail": {
-            "type": "string"
+            "type": "string",
+            "format": "email"
           },
           "testName": {
             "type": "string"
