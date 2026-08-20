@@ -14,6 +14,7 @@ import { AuditModule } from './audit/audit.module';
 import { SystemModule } from './system/system.module';
 import { FacesModule } from './faces/faces.module';
 import { AcademicPeriodsModule } from './academic-periods/academic-periods.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AcademicPeriodsModule } from './academic-periods/academic-periods.modul
     CoursesModule,
     AttendanceModule,
     GradesModule,
+    MailModule,
     CommunicationsModule,
     AuditModule,
     SystemModule,

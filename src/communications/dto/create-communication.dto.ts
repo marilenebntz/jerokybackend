@@ -5,6 +5,7 @@ import {
   ArrayNotEmpty,
   Length,
   IsOptional,
+  IsEmail,
 } from 'class-validator';
 import { UserRole } from '../../users/entities/user.entity';
 
@@ -32,4 +33,12 @@ export class CreateCommunicationDto {
   @IsOptional()
   @IsString()
   courseId?: string;
+
+  @IsOptional()
+  @IsEmail({}, { message: 'El correo de prueba debe tener un formato de email válido' })
+  testEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  testName?: string;
 }

@@ -19,9 +19,6 @@ export class CommunicationLog {
   @Column()
   communicationId: string;
 
-  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
-  recipient: User | null;
-
   @Column({ type: 'varchar', nullable: true })
   recipientId: string | null;
 
@@ -37,8 +34,17 @@ export class CommunicationLog {
   @Column()
   channel: string; // 'Web', 'Email'
 
-  @Column({ default: 'sent' }) // sent, delivered, failed
+  @Column({ default: 'sent' }) // delivered, failed, pending, sent
   status: string;
+
+  @Column({ type: 'text', nullable: true })
+  errorMessage: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  externalId: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  recipientDescription: string | null;
 
   @CreateDateColumn()
   sentAt: Date;
