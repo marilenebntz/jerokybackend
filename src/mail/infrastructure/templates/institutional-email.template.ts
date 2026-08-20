@@ -11,7 +11,7 @@ export function generateInstitutionalEmailHtml(
   params: InstitutionalEmailTemplateParams,
 ): string {
   const academyName =
-    params.academyName || 'Centro de Danzas Jeroky Paraguai';
+    params.academyName || 'Academia de Danza Jeroky Paraguai';
   const year = params.year || new Date().getFullYear();
   const dateFormatted = new Intl.DateTimeFormat('es-PY', {
     dateStyle: 'long',
@@ -52,36 +52,36 @@ export function generateInstitutionalEmailHtml(
       max-width: 600px;
       margin: 0 auto;
       background-color: #ffffff;
-      border-radius: 12px;
+      border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
       border: 1px solid #e2e8f0;
     }
     .header {
-      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
-      padding: 32px 28px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2c58a2 100%);
+      padding: 36px 28px;
       text-align: center;
       color: #ffffff;
     }
     .header-logo-text {
-      font-size: 24px;
+      font-size: 26px;
       font-weight: 800;
       letter-spacing: -0.5px;
       margin: 0;
-      color: #f8fafc;
+      color: #ffffff;
       text-transform: uppercase;
     }
     .header-badge {
       display: inline-block;
       margin-top: 8px;
-      font-size: 12px;
+      font-size: 11px;
       letter-spacing: 1.2px;
       text-transform: uppercase;
-      background-color: rgba(255, 255, 255, 0.15);
-      padding: 4px 12px;
+      background-color: rgba(255, 255, 255, 0.2);
+      padding: 4px 14px;
       border-radius: 9999px;
-      color: #e0e7ff;
-      font-weight: 600;
+      color: #ffffff;
+      font-weight: 700;
     }
     .content {
       padding: 32px 28px;
@@ -96,13 +96,13 @@ export function generateInstitutionalEmailHtml(
     .greeting {
       font-size: 15px;
       font-weight: 600;
-      color: #4338ca;
+      color: #2c58a2;
       margin: 0 0 16px 0;
     }
     .body-box {
       background-color: #f8fafc;
-      border-left: 4px solid #4338ca;
-      border-radius: 0 8px 8px 0;
+      border-left: 4px solid #2c58a2;
+      border-radius: 0 10px 10px 0;
       padding: 20px;
       margin: 20px 0;
     }
@@ -126,8 +126,8 @@ export function generateInstitutionalEmailHtml(
       margin: 4px 0;
     }
     .footer-highlight {
-      font-weight: 600;
-      color: #334155;
+      font-weight: 700;
+      color: #1e293b;
     }
   </style>
 </head>
