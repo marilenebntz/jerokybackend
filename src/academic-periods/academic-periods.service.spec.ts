@@ -374,7 +374,7 @@ describe('AcademicPeriodsService - Unit Tests', () => {
   });
 
   describe('seedDefaults', () => {
-    it('should create all 4 stages when none exist for the year', async () => {
+    it('should create default stages (1ª and 2ª Etapa) when none exist for the year', async () => {
       academicPeriodRepo.findOne.mockResolvedValue(null);
       academicPeriodRepo.find.mockResolvedValue([
         {
@@ -395,29 +395,11 @@ describe('AcademicPeriodsService - Unit Tests', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
         },
-        {
-          id: '3',
-          year: 2026,
-          name: EvaluationStage.EXAMEN_FINAL,
-          startDate: '2026-11-01',
-          endDate: '2026-11-30',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '4',
-          year: 2026,
-          name: EvaluationStage.RECUPERATORIO,
-          startDate: '2026-12-01',
-          endDate: '2026-12-15',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
       ]);
 
       const result = await service.seedDefaults(2026);
 
-      expect(academicPeriodRepo.create).toHaveBeenCalledTimes(4);
+      expect(academicPeriodRepo.create).toHaveBeenCalledTimes(2);
       expect(academicPeriodRepo.create).toHaveBeenCalledWith({
         year: 2026,
         name: EvaluationStage.ETAPA_1,
@@ -430,19 +412,7 @@ describe('AcademicPeriodsService - Unit Tests', () => {
         startDate: '2026-07-01',
         endDate: '2026-10-31',
       });
-      expect(academicPeriodRepo.create).toHaveBeenCalledWith({
-        year: 2026,
-        name: EvaluationStage.EXAMEN_FINAL,
-        startDate: '2026-11-01',
-        endDate: '2026-11-30',
-      });
-      expect(academicPeriodRepo.create).toHaveBeenCalledWith({
-        year: 2026,
-        name: EvaluationStage.RECUPERATORIO,
-        startDate: '2026-12-01',
-        endDate: '2026-12-15',
-      });
-      expect(result).toHaveLength(4);
+      expect(result).toHaveLength(2);
     });
 
     it('should only create missing stages when some stages already exist', async () => {
@@ -463,7 +433,7 @@ describe('AcademicPeriodsService - Unit Tests', () => {
 
       await service.seedDefaults(2026);
 
-      expect(academicPeriodRepo.create).toHaveBeenCalledTimes(3);
+      expect(academicPeriodRepo.create).toHaveBeenCalledTimes(1);
     });
   });
 
