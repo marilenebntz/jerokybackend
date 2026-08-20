@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AppModule } from './app.module';
@@ -9,6 +10,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.enableCors(); // Enable CORS for frontend calls
+
+  // Increase payload size limit to support Base64 biometric face image uploads
+  app.use(json({ limit: '10mb' }));
+  app.use(urlencoded({ limit: '10mb', extended: true }));
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

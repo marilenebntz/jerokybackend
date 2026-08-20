@@ -129,10 +129,21 @@ export class FacesService {
   }
 
   private handleSdkError(error: unknown): never {
-    console.error(error);
-    if (error instanceof ServiceException) {
+    console.error('[FacesService] AWS Rekognition error:', error);
+    if (error instanceof ServiceException || (error && typeof error === 'object' && 'name' in error)) {
+      const errName = (error as { name?: string }).name;
+      if (errName === 'ResourceNotFoundException') {
+        const collectionId = this.getCollectionId();
+        const region = this.configService.get<string>('AWS_REGION', 'us-east-1');
+        throw new InternalServerErrorException(
+          `La colección '${collectionId}' no existe en AWS Rekognition (${region}). Cree la colección ejecutando: aws rekognition create-collection --collection-id ${collectionId} --region ${region}`,
+        );
+      }
+      if (errName === 'InvalidParameterException') {
+        throw new BadRequestException('No se detectó ningún rostro válido en la imagen proporcionada');
+      }
       throw new InternalServerErrorException(
-        `Rekognition error: ${error.name}`,
+        `Rekognition error: ${errName || 'Unknown'}`,
       );
     }
 

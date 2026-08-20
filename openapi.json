@@ -219,6 +219,11 @@
             }
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
         ]
@@ -241,6 +246,11 @@
             }
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
         ]
@@ -271,6 +281,11 @@
             }
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
         ]
@@ -309,6 +324,11 @@
             }
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
         ]
@@ -330,6 +350,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
         ]
@@ -360,6 +385,11 @@
             }
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
         ]
@@ -391,6 +421,11 @@
             }
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
         ]
@@ -415,6 +450,11 @@
             }
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
         ]
@@ -445,6 +485,11 @@
             }
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
         ]
@@ -466,6 +511,11 @@
             }
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
         ]
@@ -490,8 +540,146 @@
             }
           }
         },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
         "tags": [
           "Students"
+        ]
+      }
+    },
+    "/api/students/{id}/face": {
+      "post": {
+        "description": "Enrola una muestra facial en AWS Rekognition vía archivo multipart o base64",
+        "operationId": "StudentsController_registerFace",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Rostro biométrico registrado exitosamente"
+          },
+          "400": {
+            "description": "Imagen inválida o no se detectó rostro"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Registrar o actualizar rostro biométrico del alumno",
+        "tags": [
+          "Students"
+        ]
+      },
+      "delete": {
+        "description": "Elimina el rostro indexado en AWS Rekognition y limpia el biometricTemplateId",
+        "operationId": "StudentsController_deleteFace",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rostro biométrico eliminado correctamente"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Eliminar plantilla biométrica del alumno",
+        "tags": [
+          "Students"
+        ]
+      }
+    },
+    "/api/faces": {
+      "post": {
+        "operationId": "FacesController_registerFace",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Faces"
+        ]
+      }
+    },
+    "/api/faces/identify": {
+      "post": {
+        "operationId": "FacesController_identifyFace",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Faces"
+        ]
+      }
+    },
+    "/api/faces/{faceId}": {
+      "delete": {
+        "operationId": "FacesController_deleteFace",
+        "parameters": [
+          {
+            "name": "faceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Faces"
         ]
       }
     },
@@ -823,78 +1011,6 @@
         },
         "tags": [
           "Attendance"
-        ]
-      }
-    },
-    "/api/faces": {
-      "post": {
-        "operationId": "FacesController_registerFace",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Faces"
-        ]
-      }
-    },
-    "/api/faces/identify": {
-      "post": {
-        "operationId": "FacesController_identifyFace",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Faces"
-        ]
-      }
-    },
-    "/api/faces/{faceId}": {
-      "delete": {
-        "operationId": "FacesController_deleteFace",
-        "parameters": [
-          {
-            "name": "faceId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Faces"
         ]
       }
     },
