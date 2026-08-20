@@ -22,8 +22,8 @@ export class CreateTutorDto {
   ci: string;
 
   @IsNotEmpty({ message: 'El teléfono es obligatorio' })
-  @Matches(/^\d{6,13}$/, {
-    message: 'El teléfono debe ser numérico y tener entre 6 y 13 dígitos',
+  @Matches(/^\+?[\d\s-]{6,20}$/, {
+    message: 'El teléfono debe ser válido (mínimo 6 dígitos)',
   })
   phone: string;
 

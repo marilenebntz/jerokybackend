@@ -1423,7 +1423,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Communication"
+                  "type": "object"
                 }
               }
             }
@@ -1764,7 +1764,7 @@
           },
           "phone": {
             "type": "string",
-            "pattern": "^\\d{6,13}$"
+            "pattern": "^\\+?[\\d\\s-]{6,20}$"
           },
           "email": {
             "type": "string",
@@ -2466,6 +2466,12 @@
           },
           "courseId": {
             "type": "string"
+          },
+          "testEmail": {
+            "type": "string"
+          },
+          "testName": {
+            "type": "string"
           }
         },
         "required": [
@@ -2473,6 +2479,70 @@
           "body",
           "targetRoles",
           "channels"
+        ]
+      },
+      "CommunicationLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "communication": {
+            "$ref": "#/components/schemas/Communication"
+          },
+          "communicationId": {
+            "type": "string"
+          },
+          "recipientId": {
+            "type": "string",
+            "nullable": true
+          },
+          "recipientEmail": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "recipientRole": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "recipientDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "sentAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "communication",
+          "communicationId",
+          "recipientId",
+          "recipientEmail",
+          "recipientName",
+          "recipientRole",
+          "channel",
+          "status",
+          "errorMessage",
+          "externalId",
+          "recipientDescription",
+          "sentAt"
         ]
       },
       "Communication": {
@@ -2538,65 +2608,6 @@
           "senderId",
           "logs",
           "createdAt"
-        ]
-      },
-      "CommunicationLog": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "communication": {
-            "$ref": "#/components/schemas/Communication"
-          },
-          "communicationId": {
-            "type": "string"
-          },
-          "recipient": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/User"
-              }
-            ]
-          },
-          "recipientId": {
-            "type": "string",
-            "nullable": true
-          },
-          "recipientEmail": {
-            "type": "string"
-          },
-          "recipientName": {
-            "type": "string"
-          },
-          "recipientRole": {
-            "type": "string"
-          },
-          "channel": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "sentAt": {
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "communication",
-          "communicationId",
-          "recipient",
-          "recipientId",
-          "recipientEmail",
-          "recipientName",
-          "recipientRole",
-          "channel",
-          "status",
-          "sentAt"
         ]
       },
       "AuditLog": {
