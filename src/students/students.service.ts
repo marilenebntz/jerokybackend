@@ -14,6 +14,8 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { EnrollStudentDto } from './dto/enroll-student.dto';
 
+import { FacesService } from '../faces/faces.service';
+
 @Injectable()
 export class StudentsService {
   constructor(
@@ -25,6 +27,7 @@ export class StudentsService {
     private readonly enrollmentRepository: Repository<Enrollment>,
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
+    private readonly facesService: FacesService,
   ) {}
 
   async create(createStudentDto: CreateStudentDto): Promise<Student> {
@@ -226,6 +229,51 @@ export class StudentsService {
     const student = await this.findOne(id);
     student.biometricTemplateId = faceId;
     return this.studentRepository.save(student);
+  }
+
+  async registerFace(id: string, imageBuffer: Buffer) {
+    const student = await this.findOne(id);
+    const oldBiometricTemplateId = student.biometricTemplateId;
+
+    // 1. Index new face first in AWS Rekognition
+    const faceRecord = await this.facesService.registerFace(imageBuffer);
+    student.biometricTemplateId = faceRecord.faceId;
+    student.biometricConsent = true;
+
+    const savedStudent = await this.studentRepository.save(student);
+
+    // 2. Delete old face from AWS Rekognition only after new face is saved successfully
+    if (oldBiometricTemplateId && oldBiometricTemplateId !== faceRecord.faceId) {
+      try {
+        await this.facesService.deleteFace(oldBiometricTemplateId);
+      } catch (err) {
+        console.warn(`[StudentsService] Warning: Could not delete old face from Rekognition:`, err);
+      }
+    }
+
+    return {
+      student: savedStudent,
+      face: faceRecord,
+    };
+  }
+
+  async deleteFace(id: string) {
+    const student = await this.findOne(id);
+
+    if (student.biometricTemplateId) {
+      try {
+        await this.facesService.deleteFace(student.biometricTemplateId);
+      } catch (err) {
+        console.warn(`[StudentsService] Warning: Could not delete face from Rekognition:`, err);
+      }
+      student.biometricTemplateId = null;
+      await this.studentRepository.save(student);
+    }
+
+    return {
+      success: true,
+      message: 'Rostro biométrico eliminado correctamente',
+    };
   }
 
   async enroll(dto: EnrollStudentDto): Promise<Enrollment> {

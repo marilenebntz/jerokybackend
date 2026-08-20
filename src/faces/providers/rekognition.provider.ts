@@ -14,12 +14,16 @@ export const RekognitionClientProvider = {
     const secretAccessKey = configService.getOrThrow<string>(
       'AWS_SECRET_ACCESS_KEY',
     );
+    const sessionToken = configService.get<string>('AWS_SESSION_TOKEN');
 
     const config: RekognitionClientConfig = {
-      region,
+      region: region.trim(),
       credentials: {
-        accessKeyId,
-        secretAccessKey,
+        accessKeyId: accessKeyId.trim(),
+        secretAccessKey: secretAccessKey.trim(),
+        ...(sessionToken && sessionToken.trim()
+          ? { sessionToken: sessionToken.trim() }
+          : {}),
       },
     };
 
