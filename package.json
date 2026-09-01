@@ -20,6 +20,7 @@
     "schema:drop": "npm run typeorm -- schema:drop",
     "db:drop": "ts-node src/database/drop-db.ts",
     "db:seed": "ts-node src/database/run-seed.ts",
+    "db:seed:users": "ts-node src/database/run-seed.ts seed-users.sql",
     "db:setup": "npm run migration:run && npm run db:seed",
     "db:reset": "npm run db:drop && npm run migration:run && npm run db:seed",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",

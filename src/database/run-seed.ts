@@ -28,7 +28,8 @@ async function runSeed() {
     await client.connect();
     console.log('[Seed] Database connection established successfully.');
 
-    const seedSqlPath = path.resolve(__dirname, 'seed.sql');
+    const seedFileName = process.argv[2] || 'seed.sql';
+    const seedSqlPath = path.resolve(__dirname, seedFileName);
     if (!fs.existsSync(seedSqlPath)) {
       throw new Error(`Seed file not found at: ${seedSqlPath}`);
     }
