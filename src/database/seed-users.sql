@@ -1,4 +1,4 @@
-﻿-- Seed file for Jeroky Soft Database (Solo Usuarios de Prueba / Seed Mínimo)
+-- Seed file for Jeroky Soft Database (Solo Usuarios de Prueba / Seed Mínimo)
 -- Limpia todas las tablas de datos y únicamente crea los usuarios de prueba para login.
 
 -- 1. CLEAN UP EXISTING DATA (Cascade handles foreign keys)
