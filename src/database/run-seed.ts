@@ -35,7 +35,10 @@ async function runSeed() {
     }
 
     console.log(`[Seed] Reading SQL script from: ${seedSqlPath}`);
-    const sql = fs.readFileSync(seedSqlPath, 'utf8');
+    let sql = fs.readFileSync(seedSqlPath, 'utf8');
+    if (sql.charCodeAt(0) === 0xFEFF) {
+      sql = sql.slice(1);
+    }
 
     console.log('[Seed] Executing seed SQL statements...');
     await client.query(sql);
